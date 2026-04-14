@@ -45,6 +45,8 @@ export default function Sidebar({
   animationSpeed,
   setAnimationSpeed,
   onRun,
+  onReplay,
+  hasResults,
   onRunAll,
   onReset,
   isAnimating,
@@ -95,32 +97,32 @@ export default function Sidebar({
   const canRun = startNode && endNode && selectedAlgorithms.length > 0 && !isAnimating && !isLoading;
 
   return (
-    <>
-      {/* Mobile toggle button */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="lg:hidden fixed top-3 right-3 z-[2000] bg-surface-800/90 backdrop-blur-md border border-surface-700/50 rounded-lg p-2 text-surface-300 hover:text-white transition-colors"
-        id="sidebar-toggle"
-      >
-        {collapsed ? (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        ) : (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        )}
-      </button>
-
-      {/* Sidebar */}
-      <div
-        className={`fixed lg:relative top-0 right-0 h-full z-[1999] transition-transform duration-300 ease-out
-          ${collapsed ? 'translate-x-full lg:translate-x-0' : 'translate-x-0'}
-          w-80 lg:w-96 bg-surface-900/95 backdrop-blur-xl border-l border-surface-700/50
-          flex flex-col overflow-hidden`}
-        id="sidebar"
-      >
+    <div
+      className={`fixed lg:relative top-0 right-0 h-full z-[1999] transition-all duration-300 ease-in-out
+        ${collapsed ? 'translate-x-full lg:translate-x-0 -mr-80 lg:-mr-96' : 'translate-x-0'}
+        w-80 lg:w-96 bg-surface-900/95 backdrop-blur-xl border-l border-surface-700/50
+        flex flex-col`}
+      id="sidebar"
+    >
+        {/* Toggle Tab (Desktop & Mobile) */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className={`absolute top-1/2 -translate-y-1/2 -left-6 lg:-left-8 z-[2000] w-6 lg:w-8 h-16 lg:h-20 
+            ${darkMode ? 'bg-surface-900/95 border-surface-700/50' : 'bg-white border-gray-200'} 
+            border-y border-l rounded-l-xl flex items-center justify-center text-surface-400 hover:text-accent-cyan shadow-[-4px_0_12px_rgba(0,0,0,0.15)] transition-all`}
+          id="sidebar-desktop-toggle"
+          title={collapsed ? "Show Sidebar" : "Hide Sidebar"}
+        >
+          {collapsed ? (
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+            </svg>
+          )}
+        </button>
         {/* Header */}
         <div className="px-5 py-4 border-b border-surface-700/50 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -470,6 +472,18 @@ export default function Sidebar({
             )}
           </div>
 
+          {hasResults && onReplay && !isAnimating && (
+            <button
+              onClick={onReplay}
+              className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all
+                bg-accent-violet/20 text-accent-violet border border-accent-violet/30
+                hover:bg-accent-violet/30 hover:border-accent-violet/50 hover:scale-[1.02] flex items-center justify-center gap-2"
+              id="replay-btn"
+            >
+              🔄 Replay Simulation Animation
+            </button>
+          )}
+
           <div className="flex gap-2">
             <button
               onClick={onRun}
@@ -508,7 +522,6 @@ export default function Sidebar({
           </button>
         </div>
       </div>
-    </>
   );
 }
 

@@ -21,6 +21,7 @@ export default function MapView({
   pendingNode,
   onConfirmNode,
   onCancelNode,
+  onChangeLocation,
   results,
   animationSpeed,
   isAnimating,
@@ -74,7 +75,14 @@ export default function MapView({
 
     mapInstanceRef.current = map;
 
+    // Fix for map not fully rendering when container size changes natively
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(mapRef.current);
+
     return () => {
+      resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -208,7 +216,24 @@ export default function MapView({
           opacity: 1,
           fillOpacity: 1,
         }).addTo(map);
+        
         marker.bindTooltip('START', { permanent: true, direction: 'top', className: 'marker-tooltip start-tooltip' });
+        
+        // Interactive popup for changing location
+        const popupContent = document.createElement('div');
+        popupContent.className = 'text-center min-w-[120px] pb-1';
+        popupContent.innerHTML = `
+          <div class="font-bold text-[10px] mb-2 text-surface-400 tracking-wider">START POINT</div>
+          <button class="w-full px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-400 rounded-md text-[11px] font-semibold transition-colors" id="change-start-btn">
+            Change Location
+          </button>
+        `;
+        marker.bindPopup(popupContent, { closeButton: false, offset: [0, -5] });
+        popupContent.querySelector('#change-start-btn').onclick = () => {
+          marker.closePopup();
+          if (onChangeLocation) onChangeLocation('start');
+        };
+
         markersRef.current.start = marker;
       }
     }
@@ -224,11 +249,28 @@ export default function MapView({
           opacity: 1,
           fillOpacity: 1,
         }).addTo(map);
+        
         marker.bindTooltip('END', { permanent: true, direction: 'top', className: 'marker-tooltip end-tooltip' });
+
+        // Interactive popup for changing location
+        const popupContent = document.createElement('div');
+        popupContent.className = 'text-center min-w-[120px] pb-1';
+        popupContent.innerHTML = `
+          <div class="font-bold text-[10px] mb-2 text-surface-400 tracking-wider">END POINT</div>
+          <button class="w-full px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-400 rounded-md text-[11px] font-semibold transition-colors" id="change-end-btn">
+            Change Location
+          </button>
+        `;
+        marker.bindPopup(popupContent, { closeButton: false, offset: [0, -5] });
+        popupContent.querySelector('#change-end-btn').onclick = () => {
+          marker.closePopup();
+          if (onChangeLocation) onChangeLocation('end');
+        };
+
         markersRef.current.end = marker;
       }
     }
-  }, [startNode, endNode, graph]);
+  }, [startNode, endNode, graph, onChangeLocation]);
 
   // Draw pending node marker (pulsing yellow)
   useEffect(() => {
@@ -292,9 +334,11 @@ export default function MapView({
   // Animate results
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !graph || !results || results.length === 0) return;
+    if (!map || !graph || !results) return;
 
     clearAnimations();
+
+    if (results.length === 0) return;
 
     const algorithmEntries = results.filter(r => r.path.length > 0 || r.visitedOrder.length > 0);
     if (algorithmEntries.length === 0) {

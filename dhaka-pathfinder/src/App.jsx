@@ -127,13 +127,23 @@ export default function App() {
     if (!pendingNode) return;
 
     if (selectionMode === 'start') {
+      if (pendingNode === endNode) {
+        toast.warn('Please select a different node for start.', { autoClose: 2000 });
+        setPendingNode(null);
+        return;
+      }
       setStartNode(pendingNode);
-      setEndNode(null);
       setResults([]);
       setShowDashboard(false);
       setHighlightedAlgorithm(null);
-      setSelectionMode('end');
-      toast.success('✅ Start point confirmed! Now select the destination.', { autoClose: 2500 });
+      
+      if (endNode) {
+        setSelectionMode('done');
+        toast.success('✅ Start point updated! Ready to run algorithms.', { autoClose: 2500 });
+      } else {
+        setSelectionMode('end');
+        toast.success('✅ Start point confirmed! Now select the destination.', { autoClose: 2500 });
+      }
     } else if (selectionMode === 'end') {
       if (pendingNode === startNode) {
         toast.warn('Please select a different node for destination.', { autoClose: 2000 });
@@ -141,6 +151,9 @@ export default function App() {
         return;
       }
       setEndNode(pendingNode);
+      setResults([]);
+      setShowDashboard(false);
+      setHighlightedAlgorithm(null);
       setSelectionMode('done');
       toast.success('✅ Destination confirmed! Ready to run algorithms.', { autoClose: 2500 });
     }
@@ -201,6 +214,12 @@ export default function App() {
     executeAlgorithms(ALL_ALGORITHMS);
   }, [executeAlgorithms]);
 
+  const handleReplay = useCallback(() => {
+    if (results.length > 0) {
+      setResults([...results]);
+    }
+  }, [results]);
+
   const handleReset = useCallback(() => {
     setStartNode(null);
     setEndNode(null);
@@ -209,8 +228,30 @@ export default function App() {
     setShowDashboard(false);
     setSelectionMode('start');
     setHighlightedAlgorithm(null);
+    setIsAnimating(false);
     toast.info('All cleared.', { autoClose: 1500 });
   }, []);
+
+  const handleChangeNodeLocation = useCallback((type) => {
+    if (isAnimating) {
+      toast.warn('Cannot change location while animating. Reset first.', { autoClose: 2000 });
+      return;
+    }
+    
+    setResults([]);
+    setShowDashboard(false);
+    setHighlightedAlgorithm(null);
+    
+    if (type === 'start') {
+      setStartNode(null);
+      setSelectionMode('start');
+      toast.info('Select a new START point on the map.', { autoClose: 2000 });
+    } else if (type === 'end') {
+      setEndNode(null);
+      setSelectionMode('end');
+      toast.info('Select a new END point on the map.', { autoClose: 2000 });
+    }
+  }, [isAnimating]);
 
   // Filter results for map display based on highlighted algorithm
   const displayResults = highlightedAlgorithm
@@ -231,6 +272,7 @@ export default function App() {
           pendingNode={pendingNode}
           onConfirmNode={handleConfirmNode}
           onCancelNode={handleCancelNode}
+          onChangeLocation={handleChangeNodeLocation}
           results={displayResults}
           animationSpeed={animationSpeed}
           isAnimating={isAnimating}
@@ -283,6 +325,8 @@ export default function App() {
         animationSpeed={animationSpeed}
         setAnimationSpeed={setAnimationSpeed}
         onRun={handleRun}
+        onReplay={handleReplay}
+        hasResults={results.length > 0}
         onRunAll={handleRunAll}
         onReset={handleReset}
         isAnimating={isAnimating}
