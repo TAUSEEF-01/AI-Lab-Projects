@@ -46,6 +46,7 @@ export default function Sidebar({
   setAnimationSpeed,
   onRun,
   onReplay,
+  onOpenDashboard,
   hasResults,
   onRunAll,
   onReset,
@@ -100,7 +101,7 @@ export default function Sidebar({
     <div
       className={`fixed lg:relative top-0 right-0 h-full z-[1999] transition-all duration-300 ease-in-out
         ${collapsed ? 'translate-x-full lg:translate-x-0 -mr-80 lg:-mr-96' : 'translate-x-0'}
-        w-80 lg:w-96 bg-surface-900/95 backdrop-blur-xl border-l border-surface-700/50
+        w-80 lg:w-96 bg-white/95 dark:bg-surface-900/95 backdrop-blur-xl border-l border-gray-200 dark:border-surface-700/50
         flex flex-col`}
       id="sidebar"
     >
@@ -108,7 +109,7 @@ export default function Sidebar({
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={`absolute top-1/2 -translate-y-1/2 -left-6 lg:-left-8 z-[2000] w-6 lg:w-8 h-16 lg:h-20 
-            ${darkMode ? 'bg-surface-900/95 border-surface-700/50' : 'bg-white border-gray-200'} 
+            ${darkMode ? 'bg-white/95 dark:bg-surface-900/95 border-gray-200 dark:border-surface-700/50' : 'bg-white border-gray-200'} 
             border-y border-l rounded-l-xl flex items-center justify-center text-surface-400 hover:text-accent-cyan shadow-[-4px_0_12px_rgba(0,0,0,0.15)] transition-all`}
           id="sidebar-desktop-toggle"
           title={collapsed ? "Show Sidebar" : "Hide Sidebar"}
@@ -124,7 +125,7 @@ export default function Sidebar({
           )}
         </button>
         {/* Header */}
-        <div className="px-5 py-4 border-b border-surface-700/50 flex-shrink-0">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-surface-700/50 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-lg font-bold bg-gradient-to-r from-accent-cyan to-accent-violet bg-clip-text text-transparent">
@@ -137,7 +138,7 @@ export default function Sidebar({
               onClick={() => setDarkMode(!darkMode)}
               className={`p-2 rounded-lg transition-all border ${
                 darkMode
-                  ? 'bg-surface-800 border-surface-700/50 text-yellow-400 hover:bg-surface-700'
+                  ? 'bg-surface-800 border-gray-200 dark:border-surface-700/50 text-yellow-400 hover:bg-surface-700'
                   : 'bg-gray-100 border-gray-300 text-indigo-600 hover:bg-gray-200'
               }`}
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -180,7 +181,7 @@ export default function Sidebar({
                       className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all
                         ${selectedArea === key
                           ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/40'
-                          : 'bg-surface-800 text-surface-400 border border-surface-700/50 hover:border-surface-600'
+                          : 'bg-surface-800 text-surface-400 border border-gray-200 dark:border-surface-700/50 hover:border-surface-600'
                         } disabled:opacity-50`}
                       id={`area-${key}`}
                     >
@@ -201,7 +202,7 @@ export default function Sidebar({
                       className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all
                         ${settings.vehicleType === v.value
                           ? 'bg-accent-violet/20 text-accent-violet border border-accent-violet/40'
-                          : 'bg-surface-800 text-surface-400 border border-surface-700/50 hover:border-surface-600'
+                          : 'bg-surface-800 text-surface-400 border border-gray-200 dark:border-surface-700/50 hover:border-surface-600'
                         }`}
                       id={`vehicle-${v.value}`}
                     >
@@ -331,8 +332,8 @@ export default function Sidebar({
                   key={alg.key}
                   className={`relative flex items-center gap-2.5 p-2 rounded-lg cursor-pointer transition-all
                     ${selectedAlgorithms.includes(alg.key)
-                      ? 'bg-surface-800/80 border border-surface-600/50'
-                      : 'border border-transparent hover:bg-surface-800/40'
+                      ? 'bg-surface-800/80 border border-gray-300 dark:border-surface-600/50'
+                      : 'border border-transparent hover:bg-gray-50 dark:bg-surface-800/40'
                     }`}
                   id={`alg-${alg.key}`}
                 >
@@ -389,7 +390,7 @@ export default function Sidebar({
                     className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all
                       ${animationSpeed === opt.value
                         ? 'bg-accent-amber/20 text-accent-amber border border-accent-amber/40'
-                        : 'bg-surface-800 text-surface-400 border border-surface-700/50 hover:border-surface-600'
+                        : 'bg-surface-800 text-surface-400 border border-gray-200 dark:border-surface-700/50 hover:border-surface-600'
                       }`}
                     id={`speed-${opt.value}`}
                   >
@@ -402,10 +403,10 @@ export default function Sidebar({
         </div>
 
         {/* Action buttons and Selection Steps (fixed at bottom) */}
-        <div className="p-4 border-t border-surface-700/50 flex-shrink-0 space-y-3">
+        <div className="p-4 border-t border-gray-200 dark:border-surface-700/50 flex-shrink-0 space-y-3">
           
           {/* Node selection status with steps */}
-          <div className="bg-surface-800/50 rounded-lg p-3 border border-surface-700/30 space-y-2">
+          <div className="bg-gray-50 dark:bg-surface-800/50 rounded-lg p-3 border border-gray-200 dark:border-surface-700/30 space-y-2">
             <div className="text-[10px] text-surface-500 uppercase tracking-wider font-semibold mb-1">Selection Steps</div>
 
             {/* Step 1: Start */}
@@ -472,16 +473,29 @@ export default function Sidebar({
             )}
           </div>
 
-          {hasResults && onReplay && !isAnimating && (
-            <button
-              onClick={onReplay}
-              className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all
-                bg-accent-violet/20 text-accent-violet border border-accent-violet/30
-                hover:bg-accent-violet/30 hover:border-accent-violet/50 hover:scale-[1.02] flex items-center justify-center gap-2"
-              id="replay-btn"
-            >
-              🔄 Replay Simulation Animation
-            </button>
+          {hasResults && !isAnimating && (
+            <div className="flex gap-2">
+              <button
+                onClick={onReplay}
+                className="flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all
+                  bg-accent-violet/20 text-accent-violet border border-accent-violet/30
+                  hover:bg-accent-violet/30 hover:border-accent-violet/50 hover:scale-[1.02] flex items-center justify-center gap-1.5"
+                id="replay-btn"
+                title="Replay Animation"
+              >
+                🔄 Replay
+              </button>
+              <button
+                onClick={onOpenDashboard}
+                className="flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all
+                  bg-accent-amber/20 text-accent-amber border border-accent-amber/30
+                  hover:bg-accent-amber/30 hover:border-accent-amber/50 hover:scale-[1.02] flex items-center justify-center gap-1.5"
+                id="dashboard-btn"
+                title="Show Comparison Dashboard"
+              >
+                📊 Dashboard
+              </button>
+            </div>
           )}
 
           <div className="flex gap-2">
@@ -513,7 +527,7 @@ export default function Sidebar({
             onClick={onReset}
             disabled={isAnimating}
             className="w-full py-2 rounded-lg text-xs font-medium text-surface-400
-              bg-surface-800 border border-surface-700/50 hover:border-surface-600
+              bg-surface-800 border border-gray-200 dark:border-surface-700/50 hover:border-surface-600
               hover:text-surface-200 transition-all
               disabled:opacity-40 disabled:cursor-not-allowed"
             id="reset-btn"
@@ -530,7 +544,7 @@ function SectionHeader({ title, icon, expanded, onToggle }) {
     <button
       onClick={onToggle}
       className="w-full flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider
-        text-surface-400 hover:text-surface-200 transition-colors border-t border-surface-700/30"
+        text-surface-400 hover:text-surface-200 transition-colors border-t border-gray-200 dark:border-surface-700/30"
     >
       <span>{icon}</span>
       <span className="flex-1 text-left">{title}</span>

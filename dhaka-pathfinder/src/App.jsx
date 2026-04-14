@@ -326,6 +326,7 @@ export default function App() {
         setAnimationSpeed={setAnimationSpeed}
         onRun={handleRun}
         onReplay={handleReplay}
+        onOpenDashboard={() => setShowDashboard(true)}
         hasResults={results.length > 0}
         onRunAll={handleRunAll}
         onReset={handleReset}
