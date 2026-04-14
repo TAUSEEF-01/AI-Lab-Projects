@@ -61,8 +61,9 @@ export default function Sidebar({
   onLoadArea,
   darkMode,
   setDarkMode,
+  collapsed,
+  setCollapsed,
 }) {
-  const [collapsed, setCollapsed] = useState(false);
   const [expandedSection, setExpandedSection] = useState({
     map: true,
     heuristic: true,

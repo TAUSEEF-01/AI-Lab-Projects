@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -63,8 +63,9 @@ export default function App() {
   // Highlighted algorithm for isolated path view (null = show all)
   const [highlightedAlgorithm, setHighlightedAlgorithm] = useState(null);
 
-  // Dark/Light mode
+  // Dark/Light mode and Application Layout State
   const [darkMode, setDarkMode] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -254,9 +255,11 @@ export default function App() {
   }, [isAnimating]);
 
   // Filter results for map display based on highlighted algorithm
-  const displayResults = highlightedAlgorithm
-    ? results.filter(r => r.algorithm === highlightedAlgorithm)
-    : results;
+  const displayResults = useMemo(() => {
+    return highlightedAlgorithm
+      ? results.filter(r => r.algorithm === highlightedAlgorithm)
+      : results;
+  }, [highlightedAlgorithm, results]);
 
   const activeArea = AREAS[selectedArea] || null;
 
@@ -341,12 +344,14 @@ export default function App() {
         onLoadArea={handleLoadArea}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
       />
 
       {/* Comparison Dashboard — Overlay from bottom */}
       {showDashboard && results.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 lg:right-96 z-[1800] max-h-[60vh] overflow-y-auto
-          bg-surface-950/95 backdrop-blur-xl border-t border-surface-700/50 animate-slide-up custom-scrollbar"
+        <div className={`fixed bottom-0 left-0 right-0 ${sidebarCollapsed ? 'lg:right-0' : 'lg:right-96'} z-[1800] max-h-[60vh] overflow-y-auto
+          bg-surface-950/95 backdrop-blur-xl border-t border-surface-700/50 animate-slide-up custom-scrollbar`}
           id="comparison-dashboard"
         >
           <div className="p-4 space-y-4">
@@ -362,7 +367,12 @@ export default function App() {
                 ✕ Close
               </button>
             </div>
-            <ComparisonTable results={results} highlightedAlgorithm={highlightedAlgorithm} setHighlightedAlgorithm={setHighlightedAlgorithm} />
+            <ComparisonTable 
+              results={results} 
+              highlightedAlgorithm={highlightedAlgorithm} 
+              setHighlightedAlgorithm={setHighlightedAlgorithm} 
+              onReplay={handleReplay} 
+            />
             <ComparisonCharts results={results} />
           </div>
         </div>

@@ -10,7 +10,7 @@ const ALGORITHM_COLORS = {
   'IDA*': '#06b6d4',
 };
 
-export default function ComparisonTable({ results, highlightedAlgorithm, setHighlightedAlgorithm }) {
+export default function ComparisonTable({ results, highlightedAlgorithm, setHighlightedAlgorithm, onReplay }) {
   const bestValues = useMemo(() => {
     if (!results || results.length === 0) return {};
 
@@ -144,23 +144,37 @@ export default function ComparisonTable({ results, highlightedAlgorithm, setHigh
                     )}
                   </td>
                   <td className="text-center px-3 py-2.5">
-                    {found && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setHighlightedAlgorithm(
-                            highlightedAlgorithm === result.algorithm ? null : result.algorithm
-                          );
-                        }}
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${
-                          highlightedAlgorithm === result.algorithm
-                            ? 'bg-white/20 text-white'
-                            : 'bg-surface-700 text-surface-400 hover:text-white hover:bg-surface-600'
-                        }`}
-                      >
-                        {highlightedAlgorithm === result.algorithm ? '👁 Viewing' : '👁 View'}
-                      </button>
-                    )}
+                    <div className="flex justify-center items-center gap-1.5">
+                      {found && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setHighlightedAlgorithm(
+                              highlightedAlgorithm === result.algorithm ? null : result.algorithm
+                            );
+                          }}
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${
+                            highlightedAlgorithm === result.algorithm
+                              ? 'bg-white/20 text-white'
+                              : 'bg-surface-700 text-surface-400 hover:text-white hover:bg-surface-600'
+                          }`}
+                        >
+                          {highlightedAlgorithm === result.algorithm ? '👁 Viewing' : '👁 View'}
+                        </button>
+                      )}
+                      {highlightedAlgorithm === result.algorithm && found && onReplay && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onReplay();
+                          }}
+                          title="Replay Animation"
+                          className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-violet/20 text-accent-violet border border-accent-violet/30 hover:bg-accent-violet/40 transition-all font-medium"
+                        >
+                          🔄 Replay
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
