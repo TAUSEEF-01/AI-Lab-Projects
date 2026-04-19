@@ -45,15 +45,20 @@ const SECURITY_ZONES = [
   { bbox: [23.74, 90.38, 23.76, 90.40], risk: 'medium' }, // Near railways
 ];
 
-function getSecurityRisk(lat, lng) {
+function deterministicMediumChance(lat, lng, nodeId) {
+  const h = Math.sin((lat + 90) * 12.9898 + (lng + 180) * 78.233 + nodeId * 0.001) * 43758.5453;
+  const u = h - Math.floor(h);
+  return u < 0.1;
+}
+
+function getSecurityRisk(lat, lng, nodeId) {
   for (const zone of SECURITY_ZONES) {
     const [s, w, n, e] = zone.bbox;
     if (lat >= s && lat <= n && lng >= w && lng <= e) {
       return zone.risk;
     }
   }
-  // Random low-level risk
-  return Math.random() < 0.1 ? 'medium' : 'low';
+  return deterministicMediumChance(lat, lng, nodeId) ? 'medium' : 'low';
 }
 
 /**
@@ -105,7 +110,7 @@ export function buildGraph(osmData) {
   for (const nodeId of usedNodeIds) {
     if (!merged.has(nodeId)) {
       const data = rawNodes.get(nodeId);
-      const securityRisk = getSecurityRisk(data.lat, data.lng);
+      const securityRisk = getSecurityRisk(data.lat, data.lng, nodeId);
       graphNodes.set(nodeId, { lat: data.lat, lng: data.lng, securityRisk });
     }
   }

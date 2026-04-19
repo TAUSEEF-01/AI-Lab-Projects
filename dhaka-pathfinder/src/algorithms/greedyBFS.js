@@ -5,12 +5,13 @@
  * @param {number} startId
  * @param {number} endId
  * @param {Function} costFn - used only for total cost calculation, not for search priority
+ * @param {function(number): number} [heuristicFn] - optional h(n); defaults to Haversine km to goal
  * @returns {{ path: number[], visitedOrder: number[], totalCost: number, timeTaken: number }}
  */
 import { MinHeap } from './minHeap';
 import { haversine } from '../utils/haversine';
 
-export function runAlgorithm(graph, startId, endId, costFn) {
+export function runAlgorithm(graph, startId, endId, costFn, heuristicFn) {
   const start = performance.now();
   const { adjacency, nodes } = graph;
 
@@ -21,6 +22,7 @@ export function runAlgorithm(graph, startId, endId, costFn) {
   const endNode = nodes.get(endId);
 
   function h(nodeId) {
+    if (heuristicFn) return heuristicFn(nodeId);
     const node = nodes.get(nodeId);
     return haversine(node.lat, node.lng, endNode.lat, endNode.lng);
   }

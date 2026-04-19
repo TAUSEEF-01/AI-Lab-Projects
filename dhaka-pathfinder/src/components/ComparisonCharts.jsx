@@ -116,6 +116,20 @@ export default function ComparisonCharts({ results }) {
       }],
     };
 
+    const gapData = {
+      labels,
+      datasets: [{
+        label: 'Δ cost vs Dijkstra',
+        data: results.map((r) =>
+          r.path.length > 0 && r.costOptimalityGap != null ? r.costOptimalityGap : 0
+        ),
+        backgroundColor: bgColors,
+        borderColor: colors,
+        borderWidth: 2,
+        borderRadius: 6,
+      }],
+    };
+
     // Radar: Normalized performance
     // Normalize each metric to 0-1 (lower is better, so invert)
     const validResults = results.filter(r => r.path.length > 0);
@@ -147,7 +161,7 @@ export default function ComparisonCharts({ results }) {
       }),
     };
 
-    return { nodesData, costData, timeData, radarData };
+    return { nodesData, costData, timeData, gapData, radarData };
   }, [results]);
 
   if (!chartData) {
@@ -199,15 +213,21 @@ export default function ComparisonCharts({ results }) {
   return (
     <div className="space-y-4">
       {/* Bar Charts Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <ChartCard title="Nodes Visited">
           <Bar data={chartData.nodesData} options={{
             ...commonOptions,
             plugins: { ...commonOptions.plugins, title: { display: false } },
           }} />
         </ChartCard>
-        <ChartCard title="Total Cost">
+        <ChartCard title="Total Cost (synthetic)">
           <Bar data={chartData.costData} options={{
+            ...commonOptions,
+            plugins: { ...commonOptions.plugins, title: { display: false } },
+          }} />
+        </ChartCard>
+        <ChartCard title="Cost gap vs Dijkstra">
+          <Bar data={chartData.gapData} options={{
             ...commonOptions,
             plugins: { ...commonOptions.plugins, title: { display: false } },
           }} />

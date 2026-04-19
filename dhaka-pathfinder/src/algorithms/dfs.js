@@ -1,12 +1,14 @@
 /**
- * Depth-First Search (unweighted).
- * Iterative implementation using a stack.
+ * Depth-First Search (unweighted expansion).
+ * Iterative implementation using a stack; path cost from costFn along the found route.
  * @param {Object} graph - { adjacency: Map, nodes: Map }
  * @param {number} startId
  * @param {number} endId
- * @param {Function} costFn - ignored for DFS
+ * @param {Function} costFn - used to sum synthetic / weighted cost along the found path
  * @returns {{ path: number[], visitedOrder: number[], totalCost: number, timeTaken: number }}
  */
+import { computePathCost } from '../utils/pathCost';
+
 export function runAlgorithm(graph, startId, endId, costFn) {
   const start = performance.now();
   const { adjacency } = graph;
@@ -55,7 +57,7 @@ export function runAlgorithm(graph, startId, endId, costFn) {
     }
   }
 
-  const totalCost = path.length > 0 ? path.length - 1 : 0;
+  const totalCost = computePathCost(graph, path, costFn);
 
   return {
     path,

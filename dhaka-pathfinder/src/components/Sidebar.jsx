@@ -270,6 +270,10 @@ export default function Sidebar({
           />
           {expandedSection.heuristic && (
             <div className="px-5 pb-4 space-y-2.5">
+              <p className="text-[10px] text-surface-500 leading-relaxed -mt-1">
+                Path cost uses per-edge synthetic data (fixed when the map loads). These sliders only tune the
+                cost-aware heuristic for A*, Greedy BFS, and IDA*.
+              </p>
               {Object.entries(WEIGHT_LABELS).map(([key, info]) => (
                 <div key={key}>
                   <div className="flex items-center justify-between">

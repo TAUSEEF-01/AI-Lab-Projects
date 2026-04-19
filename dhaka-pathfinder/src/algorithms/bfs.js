@@ -1,12 +1,14 @@
 /**
- * Breadth-First Search (unweighted).
- * Treats all edges equally (cost = 1).
+ * Breadth-First Search (unweighted expansion).
+ * Minimizes hop count; path cost is summed using costFn (e.g. synthetic edge costs).
  * @param {Object} graph - { adjacency: Map, nodes: Map }
  * @param {number} startId
  * @param {number} endId
- * @param {Function} costFn - ignored for BFS
+ * @param {Function} costFn - used to sum synthetic / weighted cost along the found path
  * @returns {{ path: number[], visitedOrder: number[], totalCost: number, timeTaken: number }}
  */
+import { computePathCost } from '../utils/pathCost';
+
 export function runAlgorithm(graph, startId, endId, costFn) {
   const start = performance.now();
   const { adjacency } = graph;
@@ -50,8 +52,7 @@ export function runAlgorithm(graph, startId, endId, costFn) {
     }
   }
 
-  // Calculate total cost (count edges)
-  const totalCost = path.length > 0 ? path.length - 1 : 0;
+  const totalCost = computePathCost(graph, path, costFn);
 
   return {
     path,

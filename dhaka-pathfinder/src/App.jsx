@@ -9,7 +9,8 @@ import ComparisonCharts from './components/ComparisonCharts';
 
 import { fetchOSMData, AREAS } from './utils/osmService';
 import { buildGraph } from './utils/graphBuilder';
-import { createCostFunction, DEFAULT_WEIGHTS, DEFAULT_SETTINGS } from './utils/heuristic';
+import { createCostFunction, createHeuristic, DEFAULT_WEIGHTS, DEFAULT_SETTINGS } from './utils/heuristic';
+import { attachSyntheticCosts } from './utils/syntheticDataset';
 import { haversine } from './utils/haversine';
 
 // Import algorithms
@@ -32,6 +33,8 @@ const ALGORITHM_MAP = {
 };
 
 const ALL_ALGORITHMS = Object.keys(ALGORITHM_MAP);
+
+const HEURISTIC_ALGORITHMS = new Set(['A*', 'Greedy BFS', 'IDA*']);
 
 export default function App() {
   // Graph state
@@ -92,6 +95,7 @@ export default function App() {
       toast.info(`Loading ${AREAS[areaKey].name} map data...`, { autoClose: 2000 });
       const osmData = await fetchOSMData(areaKey);
       const builtGraph = buildGraph(osmData);
+      attachSyntheticCosts(builtGraph);
 
       if (builtGraph.nodes.size === 0) {
         toast.error('No graph data found for this area. Try another area.');
@@ -171,14 +175,21 @@ export default function App() {
   const executeAlgorithms = useCallback((algorithmsToRun) => {
     if (!graph || !startNode || !endNode) return;
 
-    const costFn = createCostFunction(weights, settings);
+    const fallbackEdgeCost = createCostFunction(weights, settings);
+    const costFn = (fromNode, toNode, edge) =>
+      edge.syntheticCost != null ? edge.syntheticCost : fallbackEdgeCost(fromNode, toNode, edge);
+
+    const heuristicFn = createHeuristic(graph, endNode, weights, settings);
+    const hAtStart = heuristicFn(startNode);
+
     const newResults = [];
 
     for (const algName of algorithmsToRun) {
       const runFn = ALGORITHM_MAP[algName];
       if (!runFn) continue;
 
-      const result = runFn(graph, startNode, endNode, costFn);
+      const hFn = HEURISTIC_ALGORITHMS.has(algName) ? heuristicFn : undefined;
+      const result = runFn(graph, startNode, endNode, costFn, hFn);
 
       // Calculate path length in km
       let pathLength = 0;
@@ -196,10 +207,26 @@ export default function App() {
         algorithm: algName,
         ...result,
         pathLength,
+        hAtStart: HEURISTIC_ALGORITHMS.has(algName) ? hAtStart : null,
       });
 
       if (result.path.length === 0) {
         toast.warn(`${algName}: No path found!`, { autoClose: 3000 });
+      }
+    }
+
+    const dijkstraRow = newResults.find((r) => r.algorithm === 'Dijkstra');
+    const optimalCost =
+      dijkstraRow && dijkstraRow.path.length > 0 ? dijkstraRow.totalCost : null;
+
+    for (const r of newResults) {
+      r.optimalCost = optimalCost;
+      if (optimalCost != null && r.path.length > 0) {
+        r.costOptimalityGap = r.totalCost - optimalCost;
+        r.costOptimalityPct = optimalCost > 0 ? ((r.totalCost - optimalCost) / optimalCost) * 100 : null;
+      } else {
+        r.costOptimalityGap = null;
+        r.costOptimalityPct = null;
       }
     }
 

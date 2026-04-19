@@ -17,11 +17,15 @@ export default function ComparisonTable({ results, highlightedAlgorithm, setHigh
     const validResults = results.filter(r => r.path.length > 0);
     if (validResults.length === 0) return {};
 
+    const withGap = validResults.filter(r => r.costOptimalityGap != null);
     return {
       nodesVisited: Math.min(...validResults.map(r => r.visitedOrder.length)),
       pathLength: Math.min(...validResults.map(r => r.pathLength || 0)),
       totalCost: Math.min(...validResults.map(r => r.totalCost)),
       timeTaken: Math.min(...validResults.map(r => r.timeTaken)),
+      costOptimalityGap: withGap.length
+        ? Math.min(...withGap.map(r => r.costOptimalityGap))
+        : null,
     };
   }, [results]);
 
@@ -60,6 +64,8 @@ export default function ComparisonTable({ results, highlightedAlgorithm, setHigh
               <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Nodes Visited</th>
               <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Path Length</th>
               <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Total Cost</th>
+              <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">vs Optimal</th>
+              <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">h(start)</th>
               <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Time (ms)</th>
               <th className="text-center px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Found?</th>
               <th className="text-center px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">View</th>
@@ -124,6 +130,20 @@ export default function ComparisonTable({ results, highlightedAlgorithm, setHigh
                       : 'text-surface-300'
                   }`}>
                     {found ? result.totalCost.toFixed(4) : '—'}
+                  </td>
+                  <td className={`text-right px-3 py-2.5 font-mono ${
+                    found &&
+                    bestValues.costOptimalityGap != null &&
+                    result.costOptimalityGap === bestValues.costOptimalityGap
+                      ? 'text-accent-emerald font-bold'
+                      : 'text-surface-300'
+                  }`}>
+                    {found && result.costOptimalityGap != null
+                      ? `${result.costOptimalityGap >= 0 ? '+' : ''}${result.costOptimalityGap.toFixed(4)}`
+                      : '—'}
+                  </td>
+                  <td className="text-right px-3 py-2.5 font-mono text-surface-400">
+                    {found && result.hAtStart != null ? result.hAtStart.toFixed(4) : '—'}
                   </td>
                   <td className={`text-right px-3 py-2.5 font-mono ${
                     found && result.timeTaken === bestValues.timeTaken

@@ -68,3 +68,6 @@ npm run dev
 ## 📈 Future Expansion
 *   **Off-thread Processing:** Web Workers can be integrated to port heavy heuristic calculation loops away from React's DOM thread, guaranteeing 60FPS fluid UI even during 10,000+ node A* iterations.
 *   **Caching Storage:** Adding LocalStorage integration to instantly pull saved regional maps without redundantly querying OpenStreetMap endpoints.
+
+
+<!-- Final Cost = Base Distance × w.Distance × Traffic × Road Type × Vehicle Suitability × Security × Time of Day × Special Events -->

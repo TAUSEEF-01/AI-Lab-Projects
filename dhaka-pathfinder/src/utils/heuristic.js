@@ -3,8 +3,10 @@
  * Computes edge cost based on distance, traffic, road type, vehicle, security, time, and events.
  */
 
-// Traffic level multipliers
-const TRAFFIC_MULTIPLIERS = {
+import { haversine } from './haversine';
+
+// Traffic level multipliers (exported for synthetic dataset + cost-aware heuristic)
+export const TRAFFIC_MULTIPLIERS = {
   low: 1.0,
   medium: 1.5,
   high: 2.5,
@@ -12,7 +14,7 @@ const TRAFFIC_MULTIPLIERS = {
 };
 
 // Road type multipliers (inversely proportional to typical speed)
-const ROAD_TYPE_MULTIPLIERS = {
+export const ROAD_TYPE_MULTIPLIERS = {
   highway: 0.5,
   primary: 0.8,
   secondary: 1.0,
@@ -43,7 +45,7 @@ const VEHICLE_MULTIPLIERS = {
 };
 
 // Security risk multipliers
-const SECURITY_MULTIPLIERS = {
+export const SECURITY_MULTIPLIERS = {
   low: 1.0,
   medium: 1.5,
   high: 2.5,
@@ -139,5 +141,86 @@ export function createCostFunction(weights, settings) {
     // Final cost
     return baseDist * w.distance * trafficFactor * roadTypeFactor *
            vehicleFactor * securityFactor * timeFactor * occasionFactor;
+  };
+}
+
+/**
+ * Weights for the cost-aware heuristic (same keys as DEFAULT_WEIGHTS for one set of sliders).
+ * Each weight scales how strongly that factor influences h(n) relative to synthetic cost/km stats.
+ */
+export const DEFAULT_HEURISTIC_WEIGHTS = { ...DEFAULT_WEIGHTS };
+
+/**
+ * Heuristic informed by per-edge synthetic costs and local node metadata.
+ * Falls back to plain Haversine km if the graph has no syntheticStats (e.g. tests).
+ *
+ * @param {Object} graph - { nodes, syntheticStats?, heuristicNodeMeta? }
+ * @param {number} endId
+ * @param {Record<string, number>} heuristicWeights - overrides for heuristic-only weights
+ * @param {Record<string, unknown>} settings - live rush hour / occasion for h only
+ * @returns {(nodeId: number) => number}
+ */
+export function createHeuristic(graph, endId, heuristicWeights, settings) {
+  const endNode = graph.nodes.get(endId);
+  if (!endNode) {
+    return () => 0;
+  }
+
+  const stats = graph.syntheticStats;
+  const metaMap = graph.heuristicNodeMeta;
+
+  if (!stats || !metaMap || stats.edgeCount === 0) {
+    return (nodeId) => {
+      const node = graph.nodes.get(nodeId);
+      if (!node) return 0;
+      return haversine(node.lat, node.lng, endNode.lat, endNode.lng);
+    };
+  }
+
+  const hw = { ...DEFAULT_HEURISTIC_WEIGHTS, ...heuristicWeights };
+  const s = { ...DEFAULT_SETTINGS, ...settings };
+  const minR = stats.minCostPerKm;
+  const avgR = stats.avgCostPerKm;
+
+  return (nodeId) => {
+    if (nodeId === endId) return 0;
+    const node = graph.nodes.get(nodeId);
+    if (!node) return 0;
+
+    const dKm = haversine(node.lat, node.lng, endNode.lat, endNode.lng);
+    const meta = metaMap.get(nodeId) || {
+      avgCpKm: avgR,
+      avgTrafficMult: 1,
+      avgRoadMult: 1,
+    };
+
+    let h = dKm * minR * hw.distance;
+
+    const trafficExcess = Math.max(0, meta.avgTrafficMult - 1);
+    h += dKm * minR * hw.traffic * trafficExcess * 0.45;
+
+    const roadExcess = Math.max(0, meta.avgRoadMult - 0.85);
+    h += dKm * minR * hw.roadType * roadExcess * 0.35;
+
+    const localVsAvg = Math.max(0, meta.avgCpKm / avgR - 1);
+    h += dKm * minR * hw.vehicle * localVsAvg * 0.3;
+
+    const secN = SECURITY_MULTIPLIERS[node.securityRisk] || 1;
+    const secG = SECURITY_MULTIPLIERS[endNode.securityRisk] || 1;
+    h += dKm * minR * hw.security * (secN / secG - 1) * 0.4;
+
+    if (isRushHour(s.timeOfDay)) {
+      h += dKm * minR * hw.timeOfDay * 0.22;
+    }
+
+    if (s.occasionActive) {
+      const midLat = (node.lat + endNode.lat) / 2;
+      const midLng = (node.lng + endNode.lng) / 2;
+      if (isInCityCenter(midLat, midLng)) {
+        h += dKm * minR * hw.occasion * 0.38;
+      }
+    }
+
+    return Math.max(0, h);
   };
 }
