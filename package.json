@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "d3-random": "^3.0.1"
+  }
+}

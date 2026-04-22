@@ -101,34 +101,40 @@ export function createCostFunction(weights, settings) {
   const s = { ...DEFAULT_SETTINGS, ...settings };
 
   return (fromNode, toNode, edge) => {
-    // Base distance
+    // If the edge has synthetic data properties (from syntheticDataset.js)
+    if (edge.timeCost != null) {
+      const timeCost = edge.timeCost * w.distance;
+      
+      // Calculate dynamic penalties using the weights
+      const trafficDelay = edge.traffic_level * 0.1 * timeCost * w.traffic;
+      const safetyPenalty = (10 - edge.safety_level) * 0.05 * timeCost * w.security;
+      const riskPenalty = edge.risk_level * 0.05 * timeCost * w.security;
+      
+      return timeCost + trafficDelay + safetyPenalty + riskPenalty;
+    }
+
+    // Fallback if synthetic attributes are missing
     const baseDist = edge.distance;
 
-    // Traffic
-    const trafficBase = TRAFFIC_MULTIPLIERS[edge.trafficLevel] || 1.0;
+    const trafficBase = TRAFFIC_MULTIPLIERS[edge.trafficLevel || 'medium'] || 1.0;
     const trafficFactor = Math.pow(trafficBase, w.traffic);
 
-    // Road type
     const roadTypeBase = ROAD_TYPE_MULTIPLIERS[edge.roadType] || 1.0;
     const roadTypeFactor = Math.pow(roadTypeBase, w.roadType);
 
-    // Vehicle
     const vehicleMults = VEHICLE_MULTIPLIERS[s.vehicleType] || VEHICLE_MULTIPLIERS.car;
     const vehicleBase = vehicleMults[edge.roadType] || 1.0;
     const vehicleFactor = Math.pow(vehicleBase, w.vehicle);
 
-    // Security
     const secRisk = toNode.securityRisk || 'low';
     const securityBase = SECURITY_MULTIPLIERS[secRisk] || 1.0;
     const securityFactor = Math.pow(securityBase, w.security);
 
-    // Time of day
     let timeFactor = 1.0;
     if (isRushHour(s.timeOfDay)) {
       timeFactor = Math.pow(2.0, w.timeOfDay);
     }
 
-    // Occasion/event
     let occasionFactor = 1.0;
     if (s.occasionActive) {
       const midLat = (fromNode.lat + toNode.lat) / 2;
@@ -138,7 +144,6 @@ export function createCostFunction(weights, settings) {
       }
     }
 
-    // Final cost
     return baseDist * w.distance * trafficFactor * roadTypeFactor *
            vehicleFactor * securityFactor * timeFactor * occasionFactor;
   };
@@ -167,9 +172,8 @@ export function createHeuristic(graph, endId, heuristicWeights, settings) {
   }
 
   const stats = graph.syntheticStats;
-  const metaMap = graph.heuristicNodeMeta;
 
-  if (!stats || !metaMap || stats.edgeCount === 0) {
+  if (!stats || stats.edgeCount === 0) {
     return (nodeId) => {
       const node = graph.nodes.get(nodeId);
       if (!node) return 0;
@@ -180,7 +184,6 @@ export function createHeuristic(graph, endId, heuristicWeights, settings) {
   const hw = { ...DEFAULT_HEURISTIC_WEIGHTS, ...heuristicWeights };
   const s = { ...DEFAULT_SETTINGS, ...settings };
   const minR = stats.minCostPerKm;
-  const avgR = stats.avgCostPerKm;
 
   return (nodeId) => {
     if (nodeId === endId) return 0;
@@ -188,26 +191,15 @@ export function createHeuristic(graph, endId, heuristicWeights, settings) {
     if (!node) return 0;
 
     const dKm = haversine(node.lat, node.lng, endNode.lat, endNode.lng);
-    const meta = metaMap.get(nodeId) || {
-      avgCpKm: avgR,
-      avgTrafficMult: 1,
-      avgRoadMult: 1,
-    };
 
+    // Dynamic heuristic dependent on weights
+    // Uses distance as base, adjusted if the user changes global weights
     let h = dKm * minR * hw.distance;
 
-    const trafficExcess = Math.max(0, meta.avgTrafficMult - 1);
-    h += dKm * minR * hw.traffic * trafficExcess * 0.45;
-
-    const roadExcess = Math.max(0, meta.avgRoadMult - 0.85);
-    h += dKm * minR * hw.roadType * roadExcess * 0.35;
-
-    const localVsAvg = Math.max(0, meta.avgCpKm / avgR - 1);
-    h += dKm * minR * hw.vehicle * localVsAvg * 0.3;
-
+    // Apply baseline penalties purely to slightly adjust heuristic based on endNode
     const secN = SECURITY_MULTIPLIERS[node.securityRisk] || 1;
     const secG = SECURITY_MULTIPLIERS[endNode.securityRisk] || 1;
-    h += dKm * minR * hw.security * (secN / secG - 1) * 0.4;
+    h += dKm * minR * hw.security * Math.max(0, secN / secG - 1) * 0.4;
 
     if (isRushHour(s.timeOfDay)) {
       h += dKm * minR * hw.timeOfDay * 0.22;

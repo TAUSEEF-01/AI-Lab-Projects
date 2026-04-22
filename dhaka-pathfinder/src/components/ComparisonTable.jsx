@@ -65,14 +65,15 @@ export default function ComparisonTable({ results, highlightedAlgorithm, setHigh
               <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Path Length</th>
               <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Total Cost</th>
               <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">vs Optimal</th>
-              <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">h(start)</th>
+              <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">h(start) Error</th>
+              <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Efficiency</th>
               <th className="text-right px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Time (ms)</th>
               <th className="text-center px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">Found?</th>
               <th className="text-center px-3 py-2.5 text-surface-400 font-medium uppercase tracking-wider">View</th>
             </tr>
           </thead>
           <tbody>
-            {results.map((result, idx) => {
+            {results.map((result) => {
               const found = result.path.length > 0;
               const color = ALGORITHM_COLORS[result.algorithm] || '#ffffff';
 
@@ -143,7 +144,12 @@ export default function ComparisonTable({ results, highlightedAlgorithm, setHigh
                       : '—'}
                   </td>
                   <td className="text-right px-3 py-2.5 font-mono text-surface-400">
-                    {found && result.hAtStart != null ? result.hAtStart.toFixed(4) : '—'}
+                    {found && result.hAtStart != null && result.optimalCost != null 
+                     ? (result.hAtStart - result.optimalCost).toFixed(4) : '—'}
+                  </td>
+                  <td className="text-right px-3 py-2.5 font-mono text-surface-400">
+                     {found && result.efficiencyRatio != null 
+                     ? result.efficiencyRatio.toFixed(2) + 'x' : '—'}
                   </td>
                   <td className={`text-right px-3 py-2.5 font-mono ${
                     found && result.timeTaken === bestValues.timeTaken

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -164,7 +164,7 @@ export default function App() {
     }
 
     setPendingNode(null);
-  }, [pendingNode, selectionMode, startNode]);
+  }, [pendingNode, selectionMode, startNode, endNode]);
 
   // Cancel the pending node
   const handleCancelNode = useCallback(() => {
@@ -175,9 +175,7 @@ export default function App() {
   const executeAlgorithms = useCallback((algorithmsToRun) => {
     if (!graph || !startNode || !endNode) return;
 
-    const fallbackEdgeCost = createCostFunction(weights, settings);
-    const costFn = (fromNode, toNode, edge) =>
-      edge.syntheticCost != null ? edge.syntheticCost : fallbackEdgeCost(fromNode, toNode, edge);
+    const costFn = createCostFunction(weights, settings);
 
     const heuristicFn = createHeuristic(graph, endNode, weights, settings);
     const hAtStart = heuristicFn(startNode);

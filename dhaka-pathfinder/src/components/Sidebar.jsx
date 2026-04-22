@@ -55,7 +55,6 @@ export default function Sidebar({
   startNode,
   endNode,
   selectionMode,
-  setSelectionMode,
   selectedArea,
   setSelectedArea,
   onLoadArea,
@@ -412,9 +411,8 @@ export default function Sidebar({
           
           {/* Node selection status with steps */}
           <div className="bg-gray-50 dark:bg-surface-800/50 rounded-lg p-3 border border-gray-200 dark:border-surface-700/30 space-y-2">
-            <div className="text-[10px] text-surface-500 uppercase tracking-wider font-semibold mb-1">Selection Steps</div>
+            {/* <div className="text-[10px] text-surface-500 uppercase tracking-wider font-semibold mb-1">Selection Steps</div>
 
-            {/* Step 1: Start */}
             <div className={`flex items-center gap-2.5 p-2 rounded-lg transition-all ${
               selectionMode === 'start'
                 ? 'bg-emerald-500/10 border border-emerald-500/30'
@@ -437,15 +435,15 @@ export default function Sidebar({
                   )}
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Connector */}
-            <div className="flex items-center justify-center">
+            {/* <div className="flex items-center justify-center">
               <div className={`w-px h-3 ${startNode ? 'bg-surface-600' : 'bg-surface-800'}`} />
-            </div>
+            </div> */}
 
             {/* Step 2: End */}
-            <div className={`flex items-center gap-2.5 p-2 rounded-lg transition-all ${
+            {/* <div className={`flex items-center gap-2.5 p-2 rounded-lg transition-all ${
               selectionMode === 'end'
                 ? 'bg-red-500/10 border border-red-500/30'
                 : 'border border-transparent'
@@ -467,7 +465,7 @@ export default function Sidebar({
                   )}
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Ready indicator */}
             {selectionMode === 'done' && (
