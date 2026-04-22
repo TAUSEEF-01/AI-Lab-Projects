@@ -68,6 +68,7 @@ h(n) = \max\left(0, \ dKm \cdot \min_{cpk} \cdot \left( w_{dist} + 0.4 \cdot w_{
 $$
 
 **Where:**
+
 - $dKm$: The Haversine distance from node $n$ to goal $g$ in kilometers.
 - $\min_{cpk}$: The globally computed minimum synthetic cost-per-kilometer across the entire graph.
 - $w_{dist}, w_{sec}, w_{time}, w_{occ}$: The normalized user-defined weights for Distance, Security, Time/Rush Hour, and Occasion.
@@ -84,18 +85,22 @@ For algorithms like **A\*** to guarantee finding the optimal (cheapest) path, th
 Here is how admissibility is maintained in a complex, multi-weighted routing system:
 
 ### 1. Absolute Shortest Path (Straight-Line Distance)
+
 We base the distance calculation on the **Haversine (Euclidean) distance** ($dKm$). Because physical roads curve and turn, the true road distance will always be $\ge$ the straight-line distance. This guarantees an underestimation of the spatial distance.
 
 ### 2. Global Minimum Cost-Per-Kilometer ($\min_{cpk}$)
+
 Since actual edge costs are modified by traffic, risk, and speed, we find the single "cheapest" stretch of road in the entire map (`minCpKm` calculated in `syntheticDataset.js`). Multiplying the straight-line distance by this absolute best-case cost rate ensures that even if the remaining path is a straight, empty highway with zero risk, the heuristic's guess remains lower than or equal to the actual cost.
 
 ### 3. Modifying with User Weights (The Catch)
+
 In the dynamic heuristic equation, extra penalties are added conditionally (e.g., $0.4 \cdot w_{sec}$ for security differences, or $0.22 \cdot w_{time}$ for rush hour).
 
-To strictly guarantee theoretical admissibility, these added penalties must represent the **absolute minimum unavoidable penalty** for *any* path. If there is *any* path that can completely bypass the city center or avoid specific risks, adding arbitrary penalties might cause the heuristic to overestimate the true optimal cost, breaking admissibility.
+To strictly guarantee theoretical admissibility, these added penalties must represent the **absolute minimum unavoidable penalty** for _any_ path. If there is _any_ path that can completely bypass the city center or avoid specific risks, adding arbitrary penalties might cause the heuristic to overestimate the true optimal cost, breaking admissibility.
 
 **Strictly Admissible Formula:**
 To be 100% mathematically flawless, the heuristic relying solely on the absolute minimum properties (stripping out conditional additions) is:
+
 $$
 h_{admissible}(n) = \max\left(0, \ dKm \cdot \min_{cpk} \cdot w_{dist}\right)
 $$
