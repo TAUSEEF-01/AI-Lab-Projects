@@ -239,6 +239,32 @@ export default function Sidebar({
                 </div>
               </div>
 
+              {/* Gender/Passenger type */}
+              <div className="flex items-center justify-between mt-2">
+                <div>
+                  <label className="text-xs text-surface-400 uppercase tracking-wider font-medium">Passenger</label>
+                  <p className="text-[10px] text-surface-500">Gender-based risk at night</p>
+                </div>
+                <div className="flex bg-surface-800 rounded-lg p-0.5 border border-surface-700/50">
+                  <button
+                    onClick={() => setSettings(prev => ({ ...prev, gender: 'neutral' }))}
+                    className={`px-3 py-1 rounded-md text-[10px] font-medium transition-all ${
+                      settings.gender === 'neutral' ? 'bg-surface-600 text-white shadow-sm' : 'text-surface-400 hover:text-surface-300'
+                    }`}
+                  >
+                    Any
+                  </button>
+                  <button
+                    onClick={() => setSettings(prev => ({ ...prev, gender: 'female' }))}
+                    className={`px-3 py-1 rounded-md text-[10px] font-medium transition-all ${
+                      settings.gender === 'female' ? 'bg-accent-rose text-white shadow-sm' : 'text-surface-400 hover:text-surface-300'
+                    }`}
+                  >
+                    Female
+                  </button>
+                </div>
+              </div>
+
               {/* Occasion toggle */}
               <div className="flex items-center justify-between">
                 <div>

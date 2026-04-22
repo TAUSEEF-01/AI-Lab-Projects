@@ -90,6 +90,7 @@ export const DEFAULT_SETTINGS = {
   vehicleType: 'car',
   timeOfDay: 12, // 24hr format
   occasionActive: false,
+  gender: 'neutral', // 'neutral' or 'female'
 };
 
 /**
@@ -107,8 +108,26 @@ export function createCostFunction(weights, settings) {
       
       // Calculate dynamic penalties using the weights
       const trafficDelay = edge.traffic_level * 0.1 * timeCost * w.traffic;
-      const safetyPenalty = (10 - edge.safety_level) * 0.05 * timeCost * w.security;
-      const riskPenalty = edge.risk_level * 0.05 * timeCost * w.security;
+      let safetyPenalty = (10 - edge.safety_level) * 0.05 * timeCost * w.security;
+      let riskPenalty = edge.risk_level * 0.05 * timeCost * w.security;
+      
+      // Gender factor for female passengers
+      const isLateNight = s.timeOfDay >= 18 || s.timeOfDay <= 6; // 6 PM to 6 AM
+      if (s.gender === 'female') {
+        if (isLateNight) {
+          // Extremely high-risk roads are simply unavailable at night
+          if (edge.risk_level >= 7 || edge.safety_level <= 4) {
+            return Infinity;
+          }
+          // Significantly amplify risk and safety penalties dynamically for the rest
+          riskPenalty *= 5.0;
+          safetyPenalty *= 5.0;
+        } else {
+          // Even during the day, add a slight cautious multiplier
+          riskPenalty *= 1.5;
+          safetyPenalty *= 1.5;
+        }
+      }
       
       return timeCost + trafficDelay + safetyPenalty + riskPenalty;
     }
@@ -127,7 +146,23 @@ export function createCostFunction(weights, settings) {
     const vehicleFactor = Math.pow(vehicleBase, w.vehicle);
 
     const secRisk = toNode.securityRisk || 'low';
-    const securityBase = SECURITY_MULTIPLIERS[secRisk] || 1.0;
+    let securityBase = SECURITY_MULTIPLIERS[secRisk] || 1.0;
+
+    // Apply manual penalty for females in fallback calculator
+    const isLateNight = s.timeOfDay >= 18 || s.timeOfDay <= 6;
+    if (s.gender === 'female') {
+        if (isLateNight) {
+            if (secRisk === 'high') {
+                return Infinity; // Totally unavailable
+            }
+            if (secRisk === 'medium') {
+                securityBase *= 5.0;
+            }
+        } else {
+            securityBase *= 1.5;
+        }
+    }
+
     const securityFactor = Math.pow(securityBase, w.security);
 
     let timeFactor = 1.0;
