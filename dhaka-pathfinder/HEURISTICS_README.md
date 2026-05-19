@@ -106,3 +106,32 @@ h_{admissible}(n) = \max\left(0, \ dKm \cdot \min_{cpk} \cdot w_{dist}\right)
 $$
 
 Adding the environmental weights (like security or rush hour) to the heuristic makes it "cost-aware" and speeds up the search towards preferred roads by guiding the algorithm more aggressively, but falling back to the strict formula above is required if pure mathematical admissibility must be guaranteed.
+
+---
+
+## 6. Total Actual Cost Equation
+
+Based on the independent-factor implementation, the true path cost evaluated for each edge dynamically avoids multiplying zeros.
+
+If the passenger is **Female** at **Night** AND the road is **High-Risk** ($risk\_level \ge 7$ or $safety\_level \le 4$):
+$$ C(edge) = \infty $$
+
+Otherwise, the total cost $C(edge)$ is the sum of the **Weighted Base Time** and **every conditionally active independent penalty**:
+
+$$
+C(edge) = C_{dist} + C_{traffic} + C_{safety} + C_{risk} + C_{road} + C_{veh} + C_{time} + C_{occ}
+$$
+
+**Where:**
+$T = \text{baseTimeCost}$
+
+- **Distance/Time Base:** $C_{dist} = T \times w_{dist}$
+- **Traffic Penalty:** $C_{traffic} = (traffic\_level \cdot 0.1) \times T \times w_{traffic}$
+- **Safety Penalty:** $C_{safety} = (10 - safety\_level) \cdot 0.05 \times T \times w_{sec} \times M_{female}$
+- **Risk Penalty:** $C_{risk} = (risk\_level \cdot 0.05) \times T \times w_{sec} \times M_{female}$
+- **Road Type Penalty:** $C_{road} = \max(0, B_{road} - 1) \times T \times w_{road}$
+- **Vehicle Penalty:** $C_{veh} = \max(0, B_{veh} - 1) \times T \times w_{veh}$
+- **Rush Hour Penalty:** $C_{time} = 0.5 \times T \times w_{timeOfDay}$ _(only if Rush Hour)_
+- **Occasion Penalty:** $C_{occ} = 1.5 \times T \times w_{occ}$ _(only if Occasion Active & in City Center)_
+
+_(Note: $M_{female} = 5.0$ if female passenger at night, $1.5$ if female by day, and $1.0$ otherwise)._

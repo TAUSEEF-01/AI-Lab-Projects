@@ -1,0 +1,335 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Premium Light Theme Colors */
+  --bg-primary: #f1f5f9;      /* Slate 100 */
+  --bg-secondary: #ffffff;    /* Pure White */
+  --bg-tertiary: #cbd5e1;     /* Slate 300 */
+  --text-primary: #0f172a;    /* Slate 900 */
+  --text-secondary: #475569;  /* Slate 600 */
+  --text-tertiary: #64748b;   /* Slate 500 */
+  --border-color: #cbd5e1;    /* Slate 300 */
+  
+  /* Light Glassmorphism Tokens */
+  --glass-bg: rgba(255, 255, 255, 0.45);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(148, 163, 184, 0.15);
+  
+  --panel-glow-blue-bg: rgba(255, 255, 255, 0.6);
+  --panel-glow-blue-border: rgba(59, 130, 246, 0.35);
+  --panel-glow-blue-shadow: 0 0 25px rgba(59, 130, 246, 0.08);
+  
+  --panel-glow-emerald-bg: rgba(255, 255, 255, 0.6);
+  --panel-glow-emerald-border: rgba(16, 185, 129, 0.35);
+  --panel-glow-emerald-shadow: 0 0 25px rgba(16, 185, 129, 0.08);
+  
+  --glass-input-bg: rgba(255, 255, 255, 0.7);
+  --glass-input-border: rgba(15, 23, 42, 0.08);
+  --glass-input-text: #0f172a;
+  
+  /* Scrollbar & Misc */
+  --scrollbar-track: rgba(15, 23, 42, 0.05);
+  --scrollbar-thumb: rgba(15, 23, 42, 0.15);
+  --scrollbar-thumb-hover: rgba(15, 23, 42, 0.25);
+  
+  --slider-track: rgba(15, 23, 42, 0.08);
+  
+  /* Leaflet specific */
+  --leaflet-bg: #e2e8f0;
+  --leaflet-zoom-bg: rgba(255, 255, 255, 0.85);
+  --leaflet-zoom-hover: #eceff1;
+  --leaflet-tile-filter: contrast(1.05) brightness(1.02) saturate(1.1);
+}
+
+.dark {
+  /* Premium Dark Theme Colors */
+  --bg-primary: #07080a;
+  --bg-secondary: #090b0f;
+  --bg-tertiary: #0e1117;
+  --text-primary: #f8fafc;    /* Slate 50 */
+  --text-secondary: #cbd5e1;  /* Slate 300 */
+  --text-tertiary: #94a3b8;   /* Slate 400 */
+  --border-color: #0f172a;    /* Slate 900 */
+  
+  /* Dark Glassmorphism Tokens */
+  --glass-bg: rgba(15, 23, 42, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  
+  --panel-glow-blue-bg: rgba(15, 23, 42, 0.5);
+  --panel-glow-blue-border: rgba(59, 130, 246, 0.15);
+  --panel-glow-blue-shadow: 0 0 25px rgba(59, 130, 246, 0.1);
+  
+  --panel-glow-emerald-bg: rgba(15, 23, 42, 0.5);
+  --panel-glow-emerald-border: rgba(16, 185, 129, 0.15);
+  --panel-glow-emerald-shadow: 0 0 25px rgba(16, 185, 129, 0.1);
+  
+  --glass-input-bg: rgba(15, 23, 42, 0.6);
+  --glass-input-border: rgba(255, 255, 255, 0.08);
+  --glass-input-text: #f1f5f9;
+  
+  /* Scrollbar & Misc */
+  --scrollbar-track: rgba(15, 23, 42, 0.3);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+  
+  --slider-track: rgba(255, 255, 255, 0.08);
+  
+  /* Leaflet specific */
+  --leaflet-bg: #0b0c10;
+  --leaflet-zoom-bg: rgba(15, 23, 42, 0.85);
+  --leaflet-zoom-hover: rgba(99, 102, 241, 0.8);
+  --leaflet-tile-filter: contrast(1.1) brightness(0.9) saturate(1.2) hue-rotate(5deg);
+}
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  code {
+    font-family: 'Space Grotesk', Menlo, Monaco, Consolas, monospace;
+  }
+  
+  h1, h2, h3, h4, .tech-font {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+/* Glassmorphism Design System Tokens */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-panel-glow-blue {
+  background: var(--panel-glow-blue-bg);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--panel-glow-blue-border);
+  box-shadow: var(--panel-glow-blue-shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-panel-glow-emerald {
+  background: var(--panel-glow-emerald-bg);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--panel-glow-emerald-border);
+  box-shadow: var(--panel-glow-emerald-shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-input {
+  background: var(--glass-input-bg);
+  border: 1px solid var(--glass-input-border);
+  border-radius: 8px;
+  color: var(--glass-input-text);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+  outline: none;
+  background: var(--bg-secondary);
+}
+
+.glass-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Keyframe Animations */
+@keyframes flow {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.15;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+}
+
+@keyframes wave-glowing {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3), inset 0 0 5px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.6), inset 0 0 10px rgba(59, 130, 246, 0.4);
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Customized Range Sliders */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: var(--slider-track);
+  height: 6px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(135deg, #818cf8, #4f46e5);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  margin-top: -5px;
+  box-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
+  transition: transform 0.1s ease, background-color 0.2s;
+}
+
+input[type="range"]:focus::-webkit-slider-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 15px rgba(79, 70, 229, 0.8);
+}
+
+input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Leaflet Map Theme Overrides */
+.leaflet-container {
+  background-color: var(--leaflet-bg) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  border: none !important;
+  transition: background-color 0.3s ease;
+}
+
+/* Custom dark tile layer mask (to give CartoDB Dark Matter/Positron slick tech contrast) */
+.leaflet-tile-pane {
+  filter: var(--leaflet-tile-filter);
+  transition: filter 0.3s ease;
+}
+
+/* Glowing Marching Dashes for active assigned routes */
+.leaflet-interactive.route-flow {
+  stroke-dasharray: 8, 12;
+  animation: flow 4s linear infinite;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+/* Custom Popup Style */
+.leaflet-popup-content-wrapper {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--glass-shadow) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.leaflet-popup-tip {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.leaflet-popup-close-button {
+  color: var(--text-tertiary) !important;
+  padding: 8px 10px 0 0 !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #ef4444 !important;
+  background: transparent !important;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  box-shadow: var(--glass-shadow) !important;
+  transition: border-color 0.3s ease;
+}
+
+.leaflet-control-zoom-in, .leaflet-control-zoom-out {
+  background: var(--leaflet-zoom-bg) !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  transition: all 0.2s !important;
+}
+
+.leaflet-control-zoom-in:hover, .leaflet-control-zoom-out:hover {
+  background: var(--leaflet-zoom-hover) !important;
+  color: white !important;
+}
+
+.leaflet-control-attribution {
+  background: var(--glass-bg) !important;
+  color: var(--text-tertiary) !important;
+  backdrop-filter: blur(4px);
+  border-radius: 4px 0 0 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.leaflet-control-attribution a {
+  color: #818cf8 !important;
+}
+
+/* Custom Glowing Depot Markers */
+.custom-depot-marker {
+  transition: transform 0.3s ease;
+}
+.custom-depot-marker:hover {
+  transform: scale(1.25);
+  z-index: 1000 !important;
+}

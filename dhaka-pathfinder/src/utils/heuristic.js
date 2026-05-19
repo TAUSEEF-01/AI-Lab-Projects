@@ -104,12 +104,13 @@ export function createCostFunction(weights, settings) {
   return (fromNode, toNode, edge) => {
     // If the edge has synthetic data properties (from syntheticDataset.js)
     if (edge.timeCost != null) {
-      const timeCost = edge.timeCost * w.distance;
+      const baseTimeCost = edge.timeCost;
+      const weightedTimeCost = baseTimeCost * w.distance;
       
-      // Calculate dynamic penalties using the weights
-      const trafficDelay = edge.traffic_level * 0.1 * timeCost * w.traffic;
-      let safetyPenalty = (10 - edge.safety_level) * 0.05 * timeCost * w.security;
-      let riskPenalty = edge.risk_level * 0.05 * timeCost * w.security;
+      // Calculate dynamic penalties using their independent weights applied to the raw base time cost
+      const trafficDelay = edge.traffic_level * 0.1 * baseTimeCost * w.traffic;
+      let safetyPenalty = (10 - edge.safety_level) * 0.05 * baseTimeCost * w.security;
+      let riskPenalty = edge.risk_level * 0.05 * baseTimeCost * w.security;
       
       // Gender factor for female passengers
       const isLateNight = s.timeOfDay >= 18 || s.timeOfDay <= 6; // 6 PM to 6 AM
@@ -128,22 +129,45 @@ export function createCostFunction(weights, settings) {
           safetyPenalty *= 1.5;
         }
       }
+
+      // Calculate remaining independent penalties using weights
+      const roadTypeBase = ROAD_TYPE_MULTIPLIERS[edge.roadType] || 1.0;
+      const roadTypePenalty = baseTimeCost * Math.max(0, roadTypeBase - 1) * w.roadType;
       
-      return timeCost + trafficDelay + safetyPenalty + riskPenalty;
+      const vehicleMults = VEHICLE_MULTIPLIERS[s.vehicleType] || VEHICLE_MULTIPLIERS.car;
+      const vehicleBase = vehicleMults[edge.roadType] || 1.0;
+      const vehiclePenalty = baseTimeCost * Math.max(0, vehicleBase - 1) * w.vehicle;
+      
+      let timePenalty = 0;
+      if (isRushHour(s.timeOfDay)) {
+        timePenalty = baseTimeCost * 0.5 * w.timeOfDay;
+      }
+      
+      let occasionPenalty = 0;
+      if (s.occasionActive) {
+        const midLat = (fromNode.lat + toNode.lat) / 2;
+        const midLng = (fromNode.lng + toNode.lng) / 2;
+        if (isInCityCenter(midLat, midLng)) {
+          occasionPenalty = baseTimeCost * 1.5 * w.occasion;
+        }
+      }
+      
+      return weightedTimeCost + trafficDelay + safetyPenalty + riskPenalty + roadTypePenalty + vehiclePenalty + timePenalty + occasionPenalty;
     }
 
     // Fallback if synthetic attributes are missing
     const baseDist = edge.distance;
+    const weightedDistCost = baseDist * w.distance;
 
     const trafficBase = TRAFFIC_MULTIPLIERS[edge.trafficLevel || 'medium'] || 1.0;
-    const trafficFactor = Math.pow(trafficBase, w.traffic);
+    const trafficPenalty = baseDist * Math.max(0, trafficBase - 1) * w.traffic;
 
     const roadTypeBase = ROAD_TYPE_MULTIPLIERS[edge.roadType] || 1.0;
-    const roadTypeFactor = Math.pow(roadTypeBase, w.roadType);
+    const roadTypePenalty = baseDist * Math.max(0, roadTypeBase - 1) * w.roadType;
 
     const vehicleMults = VEHICLE_MULTIPLIERS[s.vehicleType] || VEHICLE_MULTIPLIERS.car;
     const vehicleBase = vehicleMults[edge.roadType] || 1.0;
-    const vehicleFactor = Math.pow(vehicleBase, w.vehicle);
+    const vehiclePenalty = baseDist * Math.max(0, vehicleBase - 1) * w.vehicle;
 
     const secRisk = toNode.securityRisk || 'low';
     let securityBase = SECURITY_MULTIPLIERS[secRisk] || 1.0;
@@ -156,31 +180,30 @@ export function createCostFunction(weights, settings) {
                 return Infinity; // Totally unavailable
             }
             if (secRisk === 'medium') {
-                securityBase *= 5.0;
+                securityBase += 4.0;
             }
         } else {
-            securityBase *= 1.5;
+            securityBase += 0.5;
         }
     }
 
-    const securityFactor = Math.pow(securityBase, w.security);
+    const securityPenalty = baseDist * Math.max(0, securityBase - 1) * w.security;
 
-    let timeFactor = 1.0;
+    let timePenaltyFb = 0;
     if (isRushHour(s.timeOfDay)) {
-      timeFactor = Math.pow(2.0, w.timeOfDay);
+      timePenaltyFb = baseDist * 1.0 * w.timeOfDay;
     }
 
-    let occasionFactor = 1.0;
+    let occasionPenaltyFb = 0;
     if (s.occasionActive) {
       const midLat = (fromNode.lat + toNode.lat) / 2;
       const midLng = (fromNode.lng + toNode.lng) / 2;
       if (isInCityCenter(midLat, midLng)) {
-        occasionFactor = Math.pow(3.0, w.occasion);
+        occasionPenaltyFb = baseDist * 2.0 * w.occasion;
       }
     }
 
-    return baseDist * w.distance * trafficFactor * roadTypeFactor *
-           vehicleFactor * securityFactor * timeFactor * occasionFactor;
+    return weightedDistCost + trafficPenalty + roadTypePenalty + vehiclePenalty + securityPenalty + timePenaltyFb + occasionPenaltyFb;
   };
 }
 

@@ -1,0 +1,172 @@
+import { haversineDistance } from '../utils/haversine';
+
+/**
+ * Backtracking with Forward Checking
+ * Prune domains of unassigned variables after each assignment
+ */
+export function solveCSP(stations, distributors, params, onProgress) {
+  const startTime = performance.now();
+  let backtracks = 0;
+  let constraintChecks = 0;
+  
+  const assignment = {};
+  const quotaUsed = {};
+  distributors.forEach(d => {
+    quotaUsed[d.id] = 0;
+  });
+  
+  // Initialize domains for each station
+  const domains = {};
+  stations.forEach(station => {
+    domains[station.id] = generateDomain(station, distributors, params);
+  });
+  
+  function isConsistent(station, distributor, time) {
+    constraintChecks++;
+    
+    const distance = haversineDistance(
+      distributor.depotLat,
+      distributor.depotLng,
+      station.lat,
+      station.lng
+    );
+    
+    const vehicle = distributor.vehicles[0];
+    const maxDistance = (vehicle.range * vehicle.currentFuel) / 100;
+    
+    if (distance > maxDistance || distance > params.maxPumpDistance) {
+      return false;
+    }
+    
+    const fuelNeeded = station.capacity - station.currentLevel;
+    if (quotaUsed[distributor.id] + fuelNeeded > distributor.quota) {
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Forward checking - prune domains of unassigned variables
+   */
+  function forwardCheck(assignedStation, assignedDistributor, assignedTime) {
+    const savedDomains = {};
+    
+    // For each unassigned station
+    for (const station of stations) {
+      if (assignment[station.id]) continue;
+      
+      savedDomains[station.id] = [...domains[station.id]];
+      const newDomain = [];
+      
+      // Filter domain values that are still consistent
+      for (const value of domains[station.id]) {
+        const { distributor, time } = value;
+        
+        // Check if this value is still valid given the new assignment
+        const fuelNeeded = station.capacity - station.currentLevel;
+        const projectedQuota = quotaUsed[distributor.id] + fuelNeeded;
+        
+        if (projectedQuota <= distributor.quota) {
+          newDomain.push(value);
+        }
+      }
+      
+      domains[station.id] = newDomain;
+      
+      // Domain wipeout - no valid values left
+      if (newDomain.length === 0) {
+        return { success: false, savedDomains };
+      }
+    }
+    
+    return { success: true, savedDomains };
+  }
+  
+  function backtrack(stationIndex) {
+    if (stationIndex >= stations.length) {
+      return true;
+    }
+    
+    const station = stations[stationIndex];
+    
+    // Try values from domain
+    for (const value of domains[station.id]) {
+      const { distributor, time } = value;
+      
+      if (isConsistent(station, distributor, time)) {
+        const fuelNeeded = station.capacity - station.currentLevel;
+        assignment[station.id] = {
+          distributorId: distributor.id,
+          time,
+          fuelAmount: fuelNeeded
+        };
+        quotaUsed[distributor.id] += fuelNeeded;
+        
+        if (onProgress) {
+          onProgress(stationIndex + 1, stations.length);
+        }
+        
+        // Forward check
+        const fcResult = forwardCheck(station, distributor, time);
+        
+        if (fcResult.success) {
+          if (backtrack(stationIndex + 1)) {
+            return true;
+          }
+        }
+        
+        // Restore domains
+        if (fcResult.savedDomains) {
+          Object.assign(domains, fcResult.savedDomains);
+        }
+        
+        backtracks++;
+        delete assignment[station.id];
+        quotaUsed[distributor.id] -= fuelNeeded;
+      }
+    }
+    
+    return false;
+  }
+  
+  const solutionFound = backtrack(0);
+  const endTime = performance.now();
+  
+  return {
+    assignment: solutionFound ? assignment : null,
+    backtracks,
+    constraintChecks,
+    timeTaken: endTime - startTime,
+    solutionFound
+  };
+}
+
+function generateDomain(station, distributors, params) {
+  const domain = [];
+  const timeSlots = generateTimeSlots(station.timeWindow, params.maxTimeWindow);
+  
+  for (const distributor of distributors) {
+    for (const time of timeSlots) {
+      domain.push({ distributor, time });
+    }
+  }
+  
+  return domain;
+}
+
+function generateTimeSlots(timeWindow, maxWindow) {
+  const slots = [];
+  const start = Math.max(0, timeWindow.start);
+  const end = Math.min(maxWindow, timeWindow.end);
+  
+  for (let t = start; t <= end; t += 2) {
+    slots.push(t);
+  }
+  
+  if (slots.length === 0) {
+    slots.push(timeWindow.start, timeWindow.end);
+  }
+  
+  return slots;
+}
