@@ -4,7 +4,10 @@ import { haversineDistance } from '../utils/haversine';
  * Backtracking with MRV (Minimum Remaining Values) Heuristic
  * Always assign the variable with the fewest legal values first
  */
-export function solveCSP(stations, distributors, params, onProgress) {
+export async function solveCSP(variables, domains, constraints, costFn, onProgress) {
+  const stations = variables;
+  const distributors = domains;
+  const params = constraints;
   const startTime = performance.now();
   let backtracks = 0;
   let constraintChecks = 0;
@@ -16,9 +19,9 @@ export function solveCSP(stations, distributors, params, onProgress) {
   });
   
   // Initialize domains
-  const domains = {};
+  const domainMap = {};
   stations.forEach(station => {
-    domains[station.id] = generateDomain(station, distributors, params);
+    domainMap[station.id] = generateDomain(station, distributors, params);
   });
   
   function isConsistent(station, distributor, time) {
@@ -56,7 +59,7 @@ export function solveCSP(stations, distributors, params, onProgress) {
     for (const station of stations) {
       if (!assignment[station.id]) {
         // Count valid values in domain
-        const validValues = domains[station.id].filter(value => {
+        const validValues = domainMap[station.id].filter(value => {
           const { distributor, time } = value;
           return isConsistent(station, distributor, time);
         });
@@ -71,7 +74,8 @@ export function solveCSP(stations, distributors, params, onProgress) {
     return selectedStation;
   }
   
-  function backtrack() {
+  async function backtrack() { 
+    await new Promise(r => setTimeout(r, 0));
     // Check if assignment is complete
     if (Object.keys(assignment).length === stations.length) {
       return true;
@@ -84,7 +88,7 @@ export function solveCSP(stations, distributors, params, onProgress) {
       return false;
     }
     
-    for (const value of domains[station.id]) {
+    for (const value of domainMap[station.id]) {
       const { distributor, time } = value;
       
       if (isConsistent(station, distributor, time)) {
@@ -98,10 +102,10 @@ export function solveCSP(stations, distributors, params, onProgress) {
         
         if (onProgress) {
           const progress = Object.keys(assignment).length;
-          onProgress(progress, stations.length);
+          onProgress(progress, stations.length, { ...assignment });
         }
         
-        if (backtrack()) {
+        if (await backtrack()) {
           return true;
         }
         
@@ -114,14 +118,20 @@ export function solveCSP(stations, distributors, params, onProgress) {
     return false;
   }
   
-  const solutionFound = backtrack();
+  const solutionFound = await backtrack();
   const endTime = performance.now();
   
+  let totalCost = null;
+  if (solutionFound) {
+    totalCost = costFn(assignment, stations, distributors, params);
+  }
+
   return {
     assignment: solutionFound ? assignment : null,
     backtracks,
     constraintChecks,
     timeTaken: endTime - startTime,
+    totalCost,
     solutionFound
   };
 }

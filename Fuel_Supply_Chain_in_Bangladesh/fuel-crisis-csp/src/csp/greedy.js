@@ -6,7 +6,10 @@ import { calculateAssignmentCost } from '../utils/costFunction';
  * Assign each variable to its locally best value without backtracking
  * Fast baseline algorithm
  */
-export function solveCSP(stations, distributors, params, onProgress) {
+export async function solveCSP(variables, domains, constraints, costFn, onProgress) {
+  const stations = variables;
+  const distributors = domains;
+  const params = constraints;
   const startTime = performance.now();
   let constraintChecks = 0;
   
@@ -88,6 +91,7 @@ export function solveCSP(stations, distributors, params, onProgress) {
   let solutionFound = true;
   
   for (let i = 0; i < sortedStations.length; i++) {
+    await new Promise(r => setTimeout(r, 0));
     const station = sortedStations[i];
     const { distributor, time } = findBestAssignment(station);
     
@@ -106,13 +110,19 @@ export function solveCSP(stations, distributors, params, onProgress) {
     quotaUsed[distributor.id] += fuelNeeded;
     
     if (onProgress) {
-      onProgress(i + 1, sortedStations.length);
+      onProgress(i + 1, sortedStations.length, { ...assignment });
     }
   }
   
   const endTime = performance.now();
   
+  let totalCost = null;
+  if (solutionFound) {
+    totalCost = costFn(assignment, stations, distributors, params);
+  }
+
   return {
+    totalCost,
     assignment: solutionFound ? assignment : null,
     backtracks: 0, // Greedy doesn't backtrack
     constraintChecks,

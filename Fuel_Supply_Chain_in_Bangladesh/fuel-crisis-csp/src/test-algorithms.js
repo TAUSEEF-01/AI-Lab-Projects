@@ -1,8 +1,9 @@
 // Simple test script to verify algorithms work
 import { generateFuelStations, generateDistributors } from './utils/dataGenerator';
 import * as greedy from './csp/greedy';
+import { calculateTotalCost } from './utils/costFunction';
 
-export function testAlgorithms() {
+export async function testAlgorithms() {
   console.log('=== Testing CSP Algorithms ===');
   
   try {
@@ -20,7 +21,7 @@ export function testAlgorithms() {
     };
     
     console.log('Running greedy algorithm...');
-    const result = greedy.solveCSP(stations, distributors, params);
+    const result = await greedy.solveCSP(stations, distributors, params, calculateTotalCost);
     
     console.log('Result:', result);
     

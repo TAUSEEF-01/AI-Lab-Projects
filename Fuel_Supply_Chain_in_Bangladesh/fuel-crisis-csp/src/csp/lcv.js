@@ -4,7 +4,10 @@ import { haversineDistance } from '../utils/haversine';
  * Backtracking with LCV (Least Constraining Value) Heuristic
  * Choose the value that rules out the fewest options for neighbors
  */
-export function solveCSP(stations, distributors, params, onProgress) {
+export async function solveCSP(variables, domains, constraints, costFn, onProgress) {
+  const stations = variables;
+  const distributors = domains;
+  const params = constraints;
   const startTime = performance.now();
   let backtracks = 0;
   let constraintChecks = 0;
@@ -15,9 +18,9 @@ export function solveCSP(stations, distributors, params, onProgress) {
     quotaUsed[d.id] = 0;
   });
   
-  const domains = {};
+  const domainMap = {};
   stations.forEach(station => {
-    domains[station.id] = generateDomain(station, distributors, params);
+    domainMap[station.id] = generateDomain(station, distributors, params);
   });
   
   function isConsistent(station, distributor, time) {
@@ -61,7 +64,7 @@ export function solveCSP(stations, distributors, params, onProgress) {
       }
       
       // Count how many domain values would become invalid
-      for (const value of domains[otherStation.id]) {
+      for (const value of domainMap[otherStation.id]) {
         if (value.distributor.id === distributor.id) {
           const otherFuelNeeded = otherStation.capacity - otherStation.currentLevel;
           
@@ -85,7 +88,7 @@ export function solveCSP(stations, distributors, params, onProgress) {
    * Order domain values by LCV - least constraining first
    */
   function orderDomainValues(station) {
-    const values = domains[station.id].filter(value => {
+    const values = domainMap[station.id].filter(value => {
       const { distributor, time } = value;
       return isConsistent(station, distributor, time);
     });
@@ -100,7 +103,8 @@ export function solveCSP(stations, distributors, params, onProgress) {
     return values;
   }
   
-  function backtrack(stationIndex) {
+  async function backtrack(stationIndex) { 
+    await new Promise(r => setTimeout(r, 0));
     if (stationIndex >= stations.length) {
       return true;
     }
@@ -122,10 +126,10 @@ export function solveCSP(stations, distributors, params, onProgress) {
       quotaUsed[distributor.id] += fuelNeeded;
       
       if (onProgress) {
-        onProgress(stationIndex + 1, stations.length);
+        onProgress(stationIndex + 1, stations.length, { ...assignment });
       }
       
-      if (backtrack(stationIndex + 1)) {
+      if (await backtrack(stationIndex + 1)) {
         return true;
       }
       
@@ -137,14 +141,20 @@ export function solveCSP(stations, distributors, params, onProgress) {
     return false;
   }
   
-  const solutionFound = backtrack(0);
+  const solutionFound = await backtrack(0);
   const endTime = performance.now();
   
+  let totalCost = null;
+  if (solutionFound) {
+    totalCost = costFn(assignment, stations, distributors, params);
+  }
+
   return {
     assignment: solutionFound ? assignment : null,
     backtracks,
     constraintChecks,
     timeTaken: endTime - startTime,
+    totalCost,
     solutionFound
   };
 }

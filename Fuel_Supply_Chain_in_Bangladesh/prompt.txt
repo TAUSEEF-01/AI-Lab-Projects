@@ -1,0 +1,158 @@
+Build a complete, interactive web application that models and solves a real-world Constraint Satisfaction Problem (CSP) centered on the Fuel Crisis / Fuel Supply Chain in Bangladesh (or a generic city). The problem addresses irrational behaviors and supply-demand imbalances among fuel distributors and actors in the supply chain. Here is the full specification:
+
+---
+
+## 1. PROBLEM STATEMENT (CSP DEFINITION)
+
+Model the fuel distribution crisis as a formal CSP with the triple (V, D, C):
+
+### Variables (V)
+- Fuel stations (each is a node): identifier, location (lat/lng), current fuel level, capacity
+- Distributors / actors: each has a fleet of vehicles, a depot location, and a supply quota
+- Vehicles: each has a fuel range (km before refuel needed), current fuel level, assigned route
+
+### Domain (D)
+- Refuel time window: within N days / M hours (user-adjustable)
+- Fuel pump distance: maximum acceptable distance from a vehicle's current position to a fuel station
+- Vehicle range: each vehicle type has a fixed range (e.g. truck = 400km, motorbike = 80km)
+- Supply quota: integer quantity each distributor can allocate per time window
+- Fuel station capacity: min and max fuel level bounds
+
+### Constraints (C)
+- A vehicle can only refuel at a station within its remaining range (range constraint)
+- A fuel station cannot exceed its maximum capacity or drop below its minimum safety level
+- Each station must be refueled within its defined time window (temporal constraint)
+- A distributor cannot supply more than its quota in a given period (quota constraint)
+- Irrational behavior penalty: routes that deviate from optimal distance by > 20% incur a cost penalty
+- No two distributors can be assigned to the same station in the same time slot (conflict constraint)
+
+---
+
+## 2. SOLVING ALGORITHMS
+
+Implement ALL of the following CSP solving strategies:
+
+1. **Backtracking Search** — naive exhaustive assignment with constraint checking
+2. **Backtracking + Forward Checking** — prune domains of unassigned variables after each assignment
+3. **Backtracking + AC-3 (Arc Consistency)** — enforce arc consistency before and during search
+4. **Min-Remaining Values (MRV) Heuristic** — always assign the variable with the fewest legal values first
+5. **Least Constraining Value (LCV) Heuristic** — choose the value that rules out the fewest options for neighbors
+6. **Greedy Assignment** — assign each variable to its locally best value without backtracking (fast baseline)
+
+Each algorithm must return:
+- The complete assignment (which distributor supplies which station, at what time)
+- Total number of backtracks / constraint checks performed
+- Execution time (ms)
+- Whether a solution was found
+
+---
+
+## 3. MAP VISUALIZATION
+
+- Use Leaflet.js with OpenStreetMap tiles.
+- Display fuel stations as colored circle markers (green = adequate, yellow = low, red = critical).
+- Display distributor depots as distinct markers.
+- When a solution is found, draw polylines showing each vehicle's assigned supply route.
+- Color-code routes by distributor.
+- Animate the assignment process: show stations being assigned one by one as the CSP solver runs.
+- Allow the user to click any station or depot to see its full details (fuel level, time window, assigned distributor).
+
+---
+
+## 4. HEURISTIC / COST METRICS
+
+Define the optimization objective that the CSP tries to minimize:
+
+Total Cost = Σ (route_distance × vehicle_fuel_consumption) + Σ (time_penalty for late refuels) + Σ (irrational_behavior_penalty)
+
+Where:
+- route_distance = Haversine distance between depot and station
+- time_penalty = cost incurred if a station is assigned outside its preferred time window
+- irrational_behavior_penalty = extra cost when a distributor skips a nearby station for a farther one
+
+---
+
+## 5. INTERACTIVE CONTROLS (SIDEBAR)
+
+Provide a sidebar with:
+- Slider: number of fuel stations (5 – 30)
+- Slider: number of distributors (2 – 10)
+- Slider: vehicle range (50 – 500 km)
+- Slider: max refuel time window (1 – 72 hours)
+- Slider: max fuel pump distance (1 – 50 km)
+- Slider: irrational behavior penalty weight (0.0 – 3.0)
+- Dropdown: vehicle type (truck, van, motorbike)
+- Dropdown: algorithm selector (run one or all)
+- Toggle: "Rush scenario" — reduces all time windows by 50%
+- Button: "Generate random scenario" — creates a new random set of stations and distributors
+- Button: "Solve" — runs selected algorithm(s)
+- Button: "Reset"
+
+---
+
+## 6. COMPARISON DASHBOARD
+
+After solving, display:
+
+### Table (one row per algorithm):
+| Algorithm | Solution Found | Assignments Made | Backtracks | Constraint Checks | Time (ms) | Total Cost |
+
+### Charts (Chart.js):
+1. Bar chart — Backtracks per algorithm
+2. Bar chart — Execution time per algorithm
+3. Bar chart — Total cost of solution per algorithm
+4. Radar chart — Overall performance (time, cost, backtracks, constraint checks) normalized
+
+---
+
+## 7. DATA GENERATION
+
+Since there is no live API for fuel stations, generate realistic synthetic data:
+- Place fuel stations randomly within a bounding box (e.g. Dhaka city: lat 23.7–24.0, lng 90.3–90.6)
+- Assign each station: capacity (500–5000 L), current level (random % of capacity), time window (random 2–24 hr window within next 3 days)
+- Assign each distributor: depot location (random within bounding box), quota (1000–8000 L/day), fleet size (2–5 vehicles)
+- Seed-based random generation so scenarios are reproducible
+
+---
+
+## 8. TECH STACK
+
+- React (Vite) + Tailwind CSS (dark theme)
+- Leaflet.js for map
+- Chart.js for dashboard charts
+- Pure JavaScript for all CSP algorithm logic (no external CSP libraries)
+- No backend required
+
+---
+
+## 9. PROJECT STRUCTURE
+
+src/
+├── components/
+│   ├── MapView.jsx           ← Leaflet map + station/depot markers + route lines
+│   ├── Sidebar.jsx           ← All sliders, dropdowns, buttons
+│   ├── ComparisonTable.jsx   ← Algorithm results table
+│   └── ComparisonCharts.jsx  ← Chart.js visualizations
+├── csp/
+│   ├── backtracking.js       ← Pure backtracking
+│   ├── forwardChecking.js    ← Backtracking + FC
+│   ├── ac3.js                ← Arc consistency (AC-3)
+│   ├── mrv.js                ← MRV heuristic
+│   ├── lcv.js                ← LCV heuristic
+│   └── greedy.js             ← Greedy baseline
+├── utils/
+│   ├── dataGenerator.js      ← Synthetic fuel station + distributor data
+│   ├── costFunction.js       ← Total cost calculation
+│   └── haversine.js          ← Distance utility
+├── App.jsx
+└── main.jsx
+
+---
+
+## 10. NOTES
+
+- All algorithm files export: solveCSP(variables, domains, constraints, costFn) => { assignment, backtracks, constraintChecks, timeTaken, totalCost }
+- The map animation should not block the UI thread (use async/await or setTimeout queues)
+- If no solution is found, display a toast: "No feasible assignment found — try relaxing constraints"
+- All slider/input values update the problem instance in real time before solving
+- The report for this assignment should be combinable with Lab Assignment 1 (Pathfinding) into a single unified lab report

@@ -4,7 +4,10 @@ import { haversineDistance } from '../utils/haversine';
  * Backtracking with Forward Checking
  * Prune domains of unassigned variables after each assignment
  */
-export function solveCSP(stations, distributors, params, onProgress) {
+export async function solveCSP(variables, domains, constraints, costFn, onProgress) {
+  const stations = variables;
+  const distributors = domains;
+  const params = constraints;
   const startTime = performance.now();
   let backtracks = 0;
   let constraintChecks = 0;
@@ -16,9 +19,9 @@ export function solveCSP(stations, distributors, params, onProgress) {
   });
   
   // Initialize domains for each station
-  const domains = {};
+  const domainMap = {};
   stations.forEach(station => {
-    domains[station.id] = generateDomain(station, distributors, params);
+    domainMap[station.id] = generateDomain(station, distributors, params);
   });
   
   function isConsistent(station, distributor, time) {
@@ -56,11 +59,11 @@ export function solveCSP(stations, distributors, params, onProgress) {
     for (const station of stations) {
       if (assignment[station.id]) continue;
       
-      savedDomains[station.id] = [...domains[station.id]];
+      savedDomains[station.id] = [...domainMap[station.id]];
       const newDomain = [];
       
       // Filter domain values that are still consistent
-      for (const value of domains[station.id]) {
+      for (const value of domainMap[station.id]) {
         const { distributor, time } = value;
         
         // Check if this value is still valid given the new assignment
@@ -72,7 +75,7 @@ export function solveCSP(stations, distributors, params, onProgress) {
         }
       }
       
-      domains[station.id] = newDomain;
+      domainMap[station.id] = newDomain;
       
       // Domain wipeout - no valid values left
       if (newDomain.length === 0) {
@@ -83,7 +86,8 @@ export function solveCSP(stations, distributors, params, onProgress) {
     return { success: true, savedDomains };
   }
   
-  function backtrack(stationIndex) {
+  async function backtrack(stationIndex) { 
+    await new Promise(r => setTimeout(r, 0));
     if (stationIndex >= stations.length) {
       return true;
     }
@@ -91,7 +95,7 @@ export function solveCSP(stations, distributors, params, onProgress) {
     const station = stations[stationIndex];
     
     // Try values from domain
-    for (const value of domains[station.id]) {
+    for (const value of domainMap[station.id]) {
       const { distributor, time } = value;
       
       if (isConsistent(station, distributor, time)) {
@@ -104,21 +108,21 @@ export function solveCSP(stations, distributors, params, onProgress) {
         quotaUsed[distributor.id] += fuelNeeded;
         
         if (onProgress) {
-          onProgress(stationIndex + 1, stations.length);
+          onProgress(stationIndex + 1, stations.length, { ...assignment });
         }
         
         // Forward check
         const fcResult = forwardCheck(station, distributor, time);
         
         if (fcResult.success) {
-          if (backtrack(stationIndex + 1)) {
+          if (await backtrack(stationIndex + 1)) {
             return true;
           }
         }
         
         // Restore domains
         if (fcResult.savedDomains) {
-          Object.assign(domains, fcResult.savedDomains);
+          Object.assign(domainMap, fcResult.savedDomains);
         }
         
         backtracks++;
@@ -130,14 +134,20 @@ export function solveCSP(stations, distributors, params, onProgress) {
     return false;
   }
   
-  const solutionFound = backtrack(0);
+  const solutionFound = await backtrack(0);
   const endTime = performance.now();
   
+  let totalCost = null;
+  if (solutionFound) {
+    totalCost = costFn(assignment, stations, distributors, params);
+  }
+
   return {
     assignment: solutionFound ? assignment : null,
     backtracks,
     constraintChecks,
     timeTaken: endTime - startTime,
+    totalCost,
     solutionFound
   };
 }

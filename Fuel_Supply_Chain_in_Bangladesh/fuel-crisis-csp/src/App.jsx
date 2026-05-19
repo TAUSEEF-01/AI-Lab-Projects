@@ -3,7 +3,7 @@ import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
 import ComparisonTable from './components/ComparisonTable';
 import ComparisonCharts from './components/ComparisonCharts';
-import { generateFuelStations, generateDistributors, applyRushScenario } from './utils/dataGenerator';
+import { generateFuelStations, generateDistributors, applyRushScenario, REGION_BOUNDS } from './utils/dataGenerator';
 import { calculateTotalCost } from './utils/costFunction';
 import * as backtracking from './csp/backtracking';
 import * as forwardChecking from './csp/forwardChecking';
@@ -16,6 +16,7 @@ import { testAlgorithms } from './test-algorithms';
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('fuel-csp-theme') || 'dark');
   const [params, setParams] = useState({
+    region: 'dhaka',
     numStations: 10,
     numDistributors: 3,
     vehicleRange: 400,
@@ -34,6 +35,82 @@ function App() {
   const [solving, setSolving] = useState(false);
   const [animationStep, setAnimationStep] = useState(0);
   const [notification, setNotification] = useState(null);
+  
+  // Custom Edit Mode State
+  const [editMode, setEditMode] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState(null);
+
+  const handleToggleEditMode = (mode) => {
+    setEditMode(mode);
+    setSelectedEntity(null); // Clear selection when toggling
+    if (mode) {
+      showNotification('Edit Mode Enabled. Click map to add entities.', 'info');
+    }
+  };
+
+  const handleMapClick = (lat, lng) => {
+    if (!editMode) return;
+    const choice = window.confirm("Add a Fuel Station? (Click 'Cancel' to add a Distributor instead)");
+    
+    if (choice) {
+      // Add Station
+      const newStation = {
+        id: `station-custom-${Date.now()}`,
+        name: `Custom Station`,
+        lat,
+        lng,
+        capacity: 2000,
+        currentLevel: 1000,
+        minLevel: 200,
+        status: 'adequate',
+        timeWindow: { start: 0, end: 24 },
+        assigned: false,
+        assignedDistributor: null,
+        assignedTime: null
+      };
+      setStations(prev => [...prev, newStation]);
+      showNotification('Added Custom Station', 'success');
+    } else {
+      // Add Distributor
+      const newDistributor = {
+        id: `distributor-custom-${Date.now()}`,
+        name: `Custom Depot`,
+        depotLat: lat,
+        depotLng: lng,
+        quota: 25000,
+        vehicles: [],
+        color: '#10b981', // Emerald
+        assignedStations: []
+      };
+      setDistributors(prev => [...prev, newDistributor]);
+      showNotification('Added Custom Distributor', 'success');
+    }
+  };
+
+  const handleEntityClick = (type, id) => {
+    if (!editMode) return;
+    setSelectedEntity({ type, id });
+  };
+
+  const updateEntity = (type, id, data) => {
+    if (type === 'station') {
+      setStations(prev => prev.map(s => {
+        if (s.id === id) {
+          // Auto-recalculate status for stations
+          const current = data.currentLevel !== undefined ? data.currentLevel : s.currentLevel;
+          const cap = data.capacity !== undefined ? data.capacity : s.capacity;
+          const pct = (current / cap) * 100;
+          let status = 'adequate';
+          if (pct < 20) status = 'critical';
+          else if (pct < 50) status = 'low';
+          return { ...s, ...data, status };
+        }
+        return s;
+      }));
+    } else if (type === 'distributor') {
+      setDistributors(prev => prev.map(d => d.id === id ? { ...d, ...data } : d));
+    }
+  };
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -54,18 +131,18 @@ function App() {
     testAlgorithms();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   
-  const generateScenario = () => {
+  const generateScenario = (currentParams = params) => {
     try {
       const seed = Date.now();
       console.log('Generating scenario with seed:', seed);
       
-      let newStations = generateFuelStations(params.numStations, seed);
-      const newDistributors = generateDistributors(params.numDistributors, params.vehicleType, seed);
+      let newStations = generateFuelStations(currentParams.numStations, currentParams.region, seed);
+      const newDistributors = generateDistributors(currentParams.numDistributors, currentParams.vehicleType, currentParams.region, seed);
       
       console.log('Generated stations:', newStations.length);
       console.log('Generated distributors:', newDistributors.length);
       
-      if (params.rushScenario) {
+      if (currentParams.rushScenario) {
         newStations = applyRushScenario(newStations);
         console.log('Applied rush scenario');
       }
@@ -84,7 +161,22 @@ function App() {
   };
   
   const handleParamsChange = (newParams) => {
-    setParams(prev => ({ ...prev, ...newParams }));
+    setParams(prev => {
+      const updatedParams = { ...prev, ...newParams };
+      
+      // If any structural parameter changed, regenerate the scenario
+      if (
+        'region' in newParams ||
+        'numStations' in newParams || 
+        'numDistributors' in newParams || 
+        'vehicleType' in newParams || 
+        'rushScenario' in newParams
+      ) {
+        setTimeout(() => generateScenario(updatedParams), 0);
+      }
+      
+      return updatedParams;
+    });
   };
   
   const handleGenerate = () => {
@@ -135,47 +227,28 @@ function App() {
         showNotification(`Running ${alg.name}...`, 'info');
         
         // Run algorithm
-        const result = await new Promise((resolve, reject) => {
-          setTimeout(() => {
-            try {
-              console.log(`Calling solveCSP for ${alg.name}`);
-              const res = alg.module.solveCSP(
-                stations,
-                distributors,
-                params,
-                (current, total) => {
-                  setAnimationStep(current);
-                }
-              );
-              console.log(`${alg.name} result:`, res);
-              resolve(res);
-            } catch (err) {
-              console.error(`Error in ${alg.name}:`, err);
-              reject(err);
+        let result;
+        try {
+          console.log(`Calling solveCSP for ${alg.name}`);
+          result = await alg.module.solveCSP(
+            stations,
+            distributors,
+            params,
+            calculateTotalCost,
+            (current, total, currentAssignment) => {
+              setAnimationStep(current);
+              if (currentAssignment) setAssignment(currentAssignment);
             }
-          }, 100);
-        });
-        
-        // Calculate total cost if solution found
-        let totalCost = null;
-        if (result.solutionFound && result.assignment) {
-          try {
-            totalCost = calculateTotalCost(
-              result.assignment,
-              stations,
-              distributors,
-              params
-            );
-            console.log(`${alg.name} total cost:`, totalCost);
-          } catch (err) {
-            console.error(`Error calculating cost for ${alg.name}:`, err);
-          }
+          );
+          console.log(`${alg.name} result:`, result);
+        } catch (err) {
+          console.error(`Error in ${alg.name}:`, err);
+          throw err;
         }
         
         newResults.push({
           algorithmName: alg.name,
-          ...result,
-          totalCost
+          ...result
         });
         
         // Use first successful solution for visualization
@@ -221,6 +294,12 @@ function App() {
         onReset={handleReset}
         solving={solving}
         theme={theme}
+        editMode={editMode}
+        onToggleEditMode={handleToggleEditMode}
+        selectedEntity={selectedEntity}
+        stations={stations}
+        distributors={distributors}
+        updateEntity={updateEntity}
       />
       
       {/* Main Analytics Hub */}
@@ -307,6 +386,10 @@ function App() {
                 assignment={assignment}
                 animationStep={animationStep}
                 theme={theme}
+                region={params.region}
+                editMode={editMode}
+                onMapClick={handleMapClick}
+                onEntityClick={handleEntityClick}
               />
               
               {/* Real-time Computing overlay */}
@@ -336,3 +419,4 @@ function App() {
 }
 
 export default App;
+

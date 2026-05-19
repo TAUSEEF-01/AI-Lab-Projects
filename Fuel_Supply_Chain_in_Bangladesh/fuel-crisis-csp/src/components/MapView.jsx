@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { REGION_BOUNDS } from '../utils/dataGenerator';
 
-export default function MapView({ stations, distributors, assignment, animationStep, theme }) {
+export default function MapView({ stations, distributors, assignment, animationStep, theme, region = 'dhaka', editMode, onMapClick, onEntityClick }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const tileLayerRef = useRef(null);
@@ -14,10 +15,12 @@ export default function MapView({ stations, distributors, assignment, animationS
     if (!mapRef.current || mapInstanceRef.current) return;
     
     try {
-      // Create map centered on Dhaka
+      const initialRegion = REGION_BOUNDS[region] || REGION_BOUNDS.dhaka;
+      
+      // Create map centered on initial region
       const map = L.map(mapRef.current, {
         zoomControl: false // Move zoom control later or use custom styled leaflet zoom
-      }).setView([23.8103, 90.4125], 12);
+      }).setView(initialRegion.center, initialRegion.zoom);
       
       // Add custom zoom controls at top-right
       L.control.zoom({
@@ -57,6 +60,39 @@ export default function MapView({ stations, distributors, assignment, animationS
       : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
     tileLayerRef.current.setUrl(url);
   }, [theme]);
+  
+  // Handle region changes
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const currentRegion = REGION_BOUNDS[region] || REGION_BOUNDS.dhaka;
+    mapInstanceRef.current.setView(currentRegion.center, currentRegion.zoom, { animate: true, duration: 1 });
+  }, [region]);
+  
+  // Handle map clicks in edit mode
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    
+    const handleMapClick = (e) => {
+      if (editMode && onMapClick) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      }
+    };
+    
+    if (editMode) {
+      mapInstanceRef.current.on('click', handleMapClick);
+      mapInstanceRef.current.getContainer().style.cursor = 'crosshair';
+    } else {
+      mapInstanceRef.current.off('click', handleMapClick);
+      mapInstanceRef.current.getContainer().style.cursor = '';
+    }
+    
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.off('click', handleMapClick);
+        mapInstanceRef.current.getContainer().style.cursor = '';
+      }
+    };
+  }, [editMode, onMapClick]);
   
   // Update markers and routes
   useEffect(() => {
@@ -98,39 +134,47 @@ export default function MapView({ stations, distributors, assignment, animationS
         color: '#ffffff',
         weight: 1.5,
         opacity: opacity,
-        fillOpacity: opacity
+        fillOpacity: opacity,
+        className: editMode ? 'cursor-pointer hover:stroke-indigo-500 hover:stroke-[3px] transition-all' : ''
       }).addTo(map);
       
-      // Popup with station details using responsive CSS variables
-      const levelPercent = ((station.currentLevel / station.capacity) * 100).toFixed(1);
-      let popupContent = `
-        <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11.5px; line-height: 1.5; color: var(--text-secondary); padding: 2px;">
-          <div style="font-weight: 700; font-family: 'Space Grotesk', sans-serif; font-size: 13px; margin-bottom: 6px; border-b: 1px solid var(--glass-border); padding-bottom: 4px; color: var(--text-primary);">
-            📍 ${station.name}
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 3px;">
-            <div>Status: <span style="color: ${color}; font-weight: bold; text-transform: uppercase;">${station.status}</span></div>
-            <div>Fuel Level: <span style="font-weight: bold; font-family: 'Space Grotesk'; color: var(--text-primary);">${station.currentLevel}L</span> / ${station.capacity}L (${levelPercent}%)</div>
-            <div>Time Window: <span style="font-weight: bold; font-family: 'Space Grotesk'; color: var(--text-primary);">${station.timeWindow.start}h - ${station.timeWindow.end}h</span></div>
-          </div>
-      `;
-      
-      if (isAssigned) {
-        const dist = distributors.find(d => d.id === assignment[station.id].distributorId);
-        popupContent += `
-          <div style="margin-top: 10px; padding-top: 8px; border-t: 1px dashed var(--glass-border);">
-            <div style="font-weight: 700; font-family: 'Space Grotesk', sans-serif; font-size: 12px; color: ${dist.color}; margin-bottom: 4px;">🚚 Delivery Assigned</div>
-            <div style="display: flex; flex-direction: column; gap: 2px;">
-              <div>Depot: <span style="font-weight: 600; color: var(--text-primary);">${dist.name}</span></div>
-              <div>ETA Hour: <span style="font-weight: 600; font-family: 'Space Grotesk'; color: var(--text-primary);">${assignment[station.id].time}h</span></div>
-              <div>Load Qty: <span style="font-weight: 600; font-family: 'Space Grotesk'; color: var(--text-primary);">${assignment[station.id].fuelAmount}L</span></div>
+      if (editMode) {
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          if (onEntityClick) onEntityClick('station', station.id);
+        });
+      } else {
+        // Popup with station details using responsive CSS variables
+        const levelPercent = ((station.currentLevel / station.capacity) * 100).toFixed(1);
+        let popupContent = `
+          <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11.5px; line-height: 1.5; color: var(--text-secondary); padding: 2px;">
+            <div style="font-weight: 700; font-family: 'Space Grotesk', sans-serif; font-size: 13px; margin-bottom: 6px; border-b: 1px solid var(--glass-border); padding-bottom: 4px; color: var(--text-primary);">
+              📍 ${station.name}
             </div>
-          </div>
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <div>Status: <span style="color: ${color}; font-weight: bold; text-transform: uppercase;">${station.status}</span></div>
+              <div>Fuel Level: <span style="font-weight: bold; font-family: 'Space Grotesk'; color: var(--text-primary);">${station.currentLevel}L</span> / ${station.capacity}L (${levelPercent}%)</div>
+              <div>Time Window: <span style="font-weight: bold; font-family: 'Space Grotesk'; color: var(--text-primary);">${station.timeWindow.start}h - ${station.timeWindow.end}h</span></div>
+            </div>
         `;
+        
+        if (isAssigned) {
+          const dist = distributors.find(d => d.id === assignment[station.id].distributorId);
+          popupContent += `
+            <div style="margin-top: 10px; padding-top: 8px; border-t: 1px dashed var(--glass-border);">
+              <div style="font-weight: 700; font-family: 'Space Grotesk', sans-serif; font-size: 12px; color: ${dist.color}; margin-bottom: 4px;">🚚 Delivery Assigned</div>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div>Depot: <span style="font-weight: 600; color: var(--text-primary);">${dist.name}</span></div>
+                <div>ETA Hour: <span style="font-weight: 600; font-family: 'Space Grotesk'; color: var(--text-primary);">${assignment[station.id].time}h</span></div>
+                <div>Load Qty: <span style="font-weight: 600; font-family: 'Space Grotesk'; color: var(--text-primary);">${assignment[station.id].fuelAmount}L</span></div>
+              </div>
+            </div>
+          `;
+        }
+        
+        popupContent += '</div>';
+        marker.bindPopup(popupContent);
       }
-      
-      popupContent += '</div>';
-      marker.bindPopup(popupContent);
       
       markersRef.current.push(marker);
     });
@@ -138,7 +182,7 @@ export default function MapView({ stations, distributors, assignment, animationS
     // Add distributor depot markers
     distributors.forEach(distributor => {
       const icon = L.divIcon({
-        className: 'custom-depot-marker',
+        className: `custom-depot-marker ${editMode ? 'hover:scale-110 transition-transform cursor-pointer' : ''}`,
         html: `<div style="
           background-color: ${distributor.color};
           width: 14px;
@@ -155,18 +199,25 @@ export default function MapView({ stations, distributors, assignment, animationS
         icon
       }).addTo(map);
       
-      const popupContent = `
-        <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11.5px; line-height: 1.5; color: var(--text-secondary); padding: 2px;">
-          <div style="font-weight: 700; font-family: 'Space Grotesk', sans-serif; font-size: 13px; margin-bottom: 6px; border-b: 1px solid var(--glass-border); padding-bottom: 4px; color: ${distributor.color};">
-            🏢 ${distributor.name} Depot
+      if (editMode) {
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          if (onEntityClick) onEntityClick('distributor', distributor.id);
+        });
+      } else {
+        const popupContent = `
+          <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11.5px; line-height: 1.5; color: var(--text-secondary); padding: 2px;">
+            <div style="font-weight: 700; font-family: 'Space Grotesk', sans-serif; font-size: 13px; margin-bottom: 6px; border-b: 1px solid var(--glass-border); padding-bottom: 4px; color: ${distributor.color};">
+              🏢 ${distributor.name} Depot
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <div>Active Fleet: <span style="font-weight: bold; color: var(--text-primary);">${distributor.vehicles.length} Trucks</span></div>
+              <div>Daily Quota: <span style="font-weight: bold; font-family: 'Space Grotesk'; color: var(--text-primary);">${distributor.quota}L/day</span></div>
+            </div>
           </div>
-          <div style="display: flex; flex-direction: column; gap: 3px;">
-            <div>Active Fleet: <span style="font-weight: bold; color: var(--text-primary);">${distributor.vehicles.length} Trucks</span></div>
-            <div>Daily Quota: <span style="font-weight: bold; font-family: 'Space Grotesk'; color: var(--text-primary);">${distributor.quota}L/day</span></div>
-          </div>
-        </div>
-      `;
-      marker.bindPopup(popupContent);
+        `;
+        marker.bindPopup(popupContent);
+      }
       
       markersRef.current.push(marker);
     });
@@ -202,7 +253,7 @@ export default function MapView({ stations, distributors, assignment, animationS
       console.error('Error updating map:', error);
     }
     
-  }, [stations, distributors, assignment, animationStep]);
+  }, [stations, distributors, assignment, animationStep, editMode, onEntityClick]);
   
   return (
     <div className="relative w-full h-full">

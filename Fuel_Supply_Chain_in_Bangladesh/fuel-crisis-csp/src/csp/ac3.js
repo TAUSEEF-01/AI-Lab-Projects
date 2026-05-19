@@ -4,7 +4,10 @@ import { haversineDistance } from '../utils/haversine';
  * Backtracking with AC-3 (Arc Consistency)
  * Enforce arc consistency before and during search
  */
-export function solveCSP(stations, distributors, params, onProgress) {
+export async function solveCSP(variables, domains, constraints, costFn, onProgress) {
+  const stations = variables;
+  const distributors = domains;
+  const params = constraints;
   const startTime = performance.now();
   let backtracks = 0;
   let constraintChecks = 0;
@@ -16,9 +19,9 @@ export function solveCSP(stations, distributors, params, onProgress) {
   });
   
   // Initialize domains
-  const domains = {};
+  const domainMap = {};
   stations.forEach(station => {
-    domains[station.id] = generateDomain(station, distributors, params);
+    domainMap[station.id] = generateDomain(station, distributors, params);
   });
   
   /**
@@ -40,7 +43,7 @@ export function solveCSP(stations, distributors, params, onProgress) {
       const [xi, xj] = queue.shift();
       
       if (revise(xi, xj)) {
-        if (domains[xi].length === 0) {
+        if (domainMap[xi].length === 0) {
           return false; // Inconsistent
         }
         
@@ -63,11 +66,11 @@ export function solveCSP(stations, distributors, params, onProgress) {
     let revised = false;
     const newDomain = [];
     
-    for (const valueI of domains[xi]) {
+    for (const valueI of domainMap[xi]) {
       let satisfiable = false;
       
       // Check if there exists a value in Xj's domain that satisfies constraint
-      for (const valueJ of domains[xj]) {
+      for (const valueJ of domainMap[xj]) {
         if (isCompatible(valueI, valueJ)) {
           satisfiable = true;
           break;
@@ -81,7 +84,7 @@ export function solveCSP(stations, distributors, params, onProgress) {
       }
     }
     
-    domains[xi] = newDomain;
+    domainMap[xi] = newDomain;
     return revised;
   }
   
@@ -125,14 +128,15 @@ export function solveCSP(stations, distributors, params, onProgress) {
     return true;
   }
   
-  function backtrack(stationIndex) {
+  async function backtrack(stationIndex) { 
+    await new Promise(r => setTimeout(r, 0));
     if (stationIndex >= stations.length) {
       return true;
     }
     
     const station = stations[stationIndex];
     
-    for (const value of domains[station.id]) {
+    for (const value of domainMap[station.id]) {
       const { distributor, time } = value;
       
       if (isConsistent(station, distributor, time)) {
@@ -145,10 +149,10 @@ export function solveCSP(stations, distributors, params, onProgress) {
         quotaUsed[distributor.id] += fuelNeeded;
         
         if (onProgress) {
-          onProgress(stationIndex + 1, stations.length);
+          onProgress(stationIndex + 1, stations.length, { ...assignment });
         }
         
-        if (backtrack(stationIndex + 1)) {
+        if (await backtrack(stationIndex + 1)) {
           return true;
         }
         
@@ -175,14 +179,20 @@ export function solveCSP(stations, distributors, params, onProgress) {
     };
   }
   
-  const solutionFound = backtrack(0);
+  const solutionFound = await backtrack(0);
   const endTime = performance.now();
   
+  let totalCost = null;
+  if (solutionFound) {
+    totalCost = costFn(assignment, stations, distributors, params);
+  }
+
   return {
     assignment: solutionFound ? assignment : null,
     backtracks,
     constraintChecks,
     timeTaken: endTime - startTime,
+    totalCost,
     solutionFound
   };
 }

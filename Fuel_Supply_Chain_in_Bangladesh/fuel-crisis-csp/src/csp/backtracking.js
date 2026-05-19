@@ -5,7 +5,10 @@ import { calculateAssignmentCost } from '../utils/costFunction';
  * Pure Backtracking Search for CSP
  * Naive exhaustive assignment with constraint checking
  */
-export function solveCSP(stations, distributors, params, onProgress) {
+export async function solveCSP(variables, domains, constraints, costFn, onProgress) {
+  const stations = variables;
+  const distributors = domains;
+  const params = constraints;
   const startTime = performance.now();
   let backtracks = 0;
   let constraintChecks = 0;
@@ -77,7 +80,8 @@ export function solveCSP(stations, distributors, params, onProgress) {
   /**
    * Recursive backtracking search
    */
-  function backtrack(stationIndex) {
+  async function backtrack(stationIndex) { 
+    await new Promise(r => setTimeout(r, 0));
     // Base case - all stations assigned
     if (stationIndex >= stations.length) {
       return true;
@@ -105,11 +109,11 @@ export function solveCSP(stations, distributors, params, onProgress) {
           
           // Progress callback
           if (onProgress) {
-            onProgress(stationIndex + 1, stations.length);
+            onProgress(stationIndex + 1, stations.length, { ...assignment });
           }
           
           // Recurse
-          if (backtrack(stationIndex + 1)) {
+          if (await backtrack(stationIndex + 1)) {
             return true;
           }
           
@@ -126,14 +130,20 @@ export function solveCSP(stations, distributors, params, onProgress) {
   }
   
   // Start search
-  const solutionFound = backtrack(0);
+  const solutionFound = await backtrack(0);
   const endTime = performance.now();
   
+  let totalCost = null;
+  if (solutionFound) {
+    totalCost = costFn(assignment, stations, distributors, params);
+  }
+
   return {
     assignment: solutionFound ? assignment : null,
     backtracks,
     constraintChecks,
     timeTaken: endTime - startTime,
+    totalCost,
     solutionFound
   };
 }
