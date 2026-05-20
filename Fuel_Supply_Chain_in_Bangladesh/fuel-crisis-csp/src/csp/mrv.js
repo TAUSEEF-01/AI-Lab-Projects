@@ -18,6 +18,9 @@ export async function solveCSP(variables, domains, constraints, costFn, onProgre
     quotaUsed[d.id] = 0;
   });
   
+  // Track distributor schedule conflicts
+  const busyDistributors = new Set(); // Stores "distributorId-time"
+  
   // Initialize domains
   const domainMap = {};
   stations.forEach(station => {
@@ -43,6 +46,12 @@ export async function solveCSP(variables, domains, constraints, costFn, onProgre
     
     const fuelNeeded = station.capacity - station.currentLevel;
     if (quotaUsed[distributor.id] + fuelNeeded > distributor.quota) {
+      return false;
+    }
+    
+    // Conflict constraint - same distributor cannot be at two places at the same time
+    const schedKey = `${distributor.id}-${time}`;
+    if (busyDistributors.has(schedKey)) {
       return false;
     }
     
@@ -99,6 +108,8 @@ export async function solveCSP(variables, domains, constraints, costFn, onProgre
           fuelAmount: fuelNeeded
         };
         quotaUsed[distributor.id] += fuelNeeded;
+        const schedKey = `${distributor.id}-${time}`;
+        busyDistributors.add(schedKey);
         
         if (onProgress) {
           const progress = Object.keys(assignment).length;
@@ -112,6 +123,7 @@ export async function solveCSP(variables, domains, constraints, costFn, onProgre
         backtracks++;
         delete assignment[station.id];
         quotaUsed[distributor.id] -= fuelNeeded;
+        busyDistributors.delete(schedKey);
       }
     }
     

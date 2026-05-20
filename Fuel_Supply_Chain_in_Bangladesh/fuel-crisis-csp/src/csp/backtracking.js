@@ -22,8 +22,8 @@ export async function solveCSP(variables, domains, constraints, costFn, onProgre
     quotaUsed[d.id] = 0;
   });
   
-  // Track time slot conflicts
-  const timeSlotAssignments = {}; // { time: Set(distributorIds) }
+  // Track distributor schedule conflicts
+  const busyDistributors = new Set(); // Stores "distributorId-time"
   
   /**
    * Check if assignment is consistent with constraints
@@ -67,10 +67,9 @@ export async function solveCSP(variables, domains, constraints, costFn, onProgre
       }
     }
     
-    // 5. Conflict constraint - no two distributors at same station/time
-    const timeKey = `${station.id}-${time}`;
-    if (timeSlotAssignments[timeKey] && 
-        timeSlotAssignments[timeKey] !== distributor.id) {
+    // 5. Conflict constraint - same distributor cannot be at two places at the same time
+    const schedKey = `${distributor.id}-${time}`;
+    if (busyDistributors.has(schedKey)) {
       return false;
     }
     
@@ -104,8 +103,8 @@ export async function solveCSP(variables, domains, constraints, costFn, onProgre
             fuelAmount: fuelNeeded
           };
           quotaUsed[distributor.id] += fuelNeeded;
-          const timeKey = `${station.id}-${time}`;
-          timeSlotAssignments[timeKey] = distributor.id;
+          const schedKey = `${distributor.id}-${time}`;
+          busyDistributors.add(schedKey);
           
           // Progress callback
           if (onProgress) {
@@ -121,7 +120,7 @@ export async function solveCSP(variables, domains, constraints, costFn, onProgre
           backtracks++;
           delete assignment[station.id];
           quotaUsed[distributor.id] -= fuelNeeded;
-          delete timeSlotAssignments[timeKey];
+          busyDistributors.delete(schedKey);
         }
       }
     }
