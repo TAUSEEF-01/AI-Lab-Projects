@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
 import ComparisonTable from './components/ComparisonTable';
@@ -39,6 +39,9 @@ function App() {
   // Custom Edit Mode State
   const [editMode, setEditMode] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
+
+  // Preserve seed to prevent unchanged parameters from reshuffling map
+  const currentSeedRef = useRef(Date.now());
 
   const handleToggleEditMode = (mode) => {
     setEditMode(mode);
@@ -131,9 +134,10 @@ function App() {
     testAlgorithms();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   
-  const generateScenario = (currentParams = params) => {
+  const generateScenario = (currentParams = params, seedOverride) => {
     try {
-      const seed = Date.now();
+      const seed = seedOverride ?? currentSeedRef.current;
+      currentSeedRef.current = seed;
       console.log('Generating scenario with seed:', seed);
       
       let newStations = generateFuelStations(currentParams.numStations, currentParams.region, seed);
@@ -180,7 +184,7 @@ function App() {
   };
   
   const handleGenerate = () => {
-    generateScenario();
+    generateScenario(params, Date.now());
   };
   
   const handleReset = () => {
