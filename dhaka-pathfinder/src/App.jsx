@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -52,6 +52,72 @@ export default function App() {
   const [weights, setWeights] = useState({ ...DEFAULT_WEIGHTS });
   const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS });
 
+  // Helper to select two distinct random nodes from the graph
+  const selectRandomNodes = useCallback((graphInstance) => {
+    if (!graphInstance || !graphInstance.nodes || graphInstance.nodes.size < 2) return;
+    const nodeIds = Array.from(graphInstance.nodes.keys());
+    let randomStart = null;
+    let randomEnd = null;
+    
+    let attempts = 0;
+    while (attempts < 100) {
+      const idx1 = Math.floor(Math.random() * nodeIds.length);
+      const idx2 = Math.floor(Math.random() * nodeIds.length);
+      if (idx1 !== idx2) {
+        randomStart = nodeIds[idx1];
+        randomEnd = nodeIds[idx2];
+        break;
+      }
+      attempts++;
+    }
+    
+    if (randomStart && randomEnd) {
+      setStartNode(randomStart);
+      setEndNode(randomEnd);
+      setPendingNode(null);
+      setSelectionMode('done');
+      setResults([]);
+      setShowDashboard(false);
+      setHighlightedAlgorithm(null);
+      setIsAnimating(false);
+    }
+  }, []);
+
+  // Refs to track previous weights and settings
+  const prevWeightsRef = useRef(weights);
+  const prevSettingsRef = useRef(settings);
+
+  // Monitor settings and weights changes to dynamically update start & end nodes
+  useEffect(() => {
+    if (!graph || graph.nodes.size < 2) {
+      prevWeightsRef.current = weights;
+      prevSettingsRef.current = settings;
+      return;
+    }
+
+    const vehicleTypeChanged = settings.vehicleType !== prevSettingsRef.current.vehicleType;
+    
+    const otherSettingsChanged =
+      settings.timeOfDay !== prevSettingsRef.current.timeOfDay ||
+      settings.occasionActive !== prevSettingsRef.current.occasionActive ||
+      settings.gender !== prevSettingsRef.current.gender;
+
+    const weightsChanged = Object.keys(weights).some(
+      (key) => weights[key] !== prevWeightsRef.current[key]
+    );
+
+    // Save current values for next comparison
+    prevWeightsRef.current = weights;
+    prevSettingsRef.current = settings;
+
+    // Trigger point change only if weights or other parameters changed, AND vehicleType did NOT change
+    // If only vehicleType changed, do NOT change the points
+    if (weightsChanged || otherSettingsChanged) {
+      selectRandomNodes(graph);
+      toast.info('🎲 Parameters changed! Selected new random start & end points.', { autoClose: 2000 });
+    }
+  }, [weights, settings, graph, selectRandomNodes]);
+
   // Algorithm selection
   const [selectedAlgorithms, setSelectedAlgorithms] = useState(['BFS', 'Dijkstra', 'A*']);
 
@@ -104,6 +170,7 @@ export default function App() {
       }
 
       setGraph(builtGraph);
+      selectRandomNodes(builtGraph);
       toast.success(`Loaded ${builtGraph.nodes.size.toLocaleString()} nodes, ${builtGraph.edges.length.toLocaleString()} edges`, { autoClose: 3000 });
     } catch (err) {
       console.error('Failed to load area:', err);
@@ -111,7 +178,7 @@ export default function App() {
     }
 
     setIsLoading(false);
-  }, []);
+  }, [selectRandomNodes]);
 
   // Handle node click on map — show pending confirmation
   const handleNodeClick = useCallback((nodeId) => {
@@ -231,6 +298,12 @@ export default function App() {
     setResults(newResults);
     setShowDashboard(true);
   }, [graph, startNode, endNode, weights, settings]);
+  // Automatically execute algorithms when graph, points, settings, weights, or selected algorithms change
+  useEffect(() => {
+    if (graph && startNode && endNode && !isAnimating) {
+      executeAlgorithms(selectedAlgorithms);
+    }
+  }, [graph, startNode, endNode, weights, settings, selectedAlgorithms, executeAlgorithms, isAnimating]);
 
   const handleRun = useCallback(() => {
     executeAlgorithms(selectedAlgorithms);

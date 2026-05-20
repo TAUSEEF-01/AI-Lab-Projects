@@ -1,73 +1,128 @@
 # Dhaka Pathfinder 🗺️🚗
+### *An Interactive Real-World AI Pathfinding Simulator & Dynamic Heuristic Engine*
 
-**Dhaka Pathfinder** is an interactive, real-world pathfinding visualization tool and analytics dashboard built to test, compare, and simulate classic graph-traversal algorithms across the complex road networks of Dhaka, Bangladesh.
+**Dhaka Pathfinder** is a highly interactive, real-world Artificial Intelligence pathfinding simulator. It parses real geographical road networks of Dhaka, Bangladesh directly from the **OpenStreetMap (OSM)** database via the **Overpass API**, compiles them into an optimized Adjacency List graph, and executes 7 different search algorithms.
 
-Developed as an Artificial Intelligence Lab project, this application directly fetches OpenStreetMap geometry using the Overpass API, parses it into an interconnected node graph, and deploys 7 different pathfinding algorithms through a dynamic, penalty-weighted heuristic engine to discover the most optimal routes.
-
-## 🚀 Features & Architecture
-
-### 1. Robust Map Data & Parsing Engine
-- **Live Overpass API Integration:** Pulls dynamic geographic metadata (roads, highways, alleys) based on user-selected neighborhoods (e.g., Dhanmondi, Gulshan) rather than relying on abstract, hardcoded grids.
-- **Resilient Fallback Networking:** Engineered to cycle seamlessly across 3 public independent Overpass servers (`overpass-api.de`, `kumi.systems`, `lz4.overpass-api.de`). This eliminates catastrophic system failures caused by rate limits and `504 Gateway Timeout` errors.
-- **Graph Builder:** An internal geographic parser immediately compiles thousands of unordered coordinate segments into a highly optimized Adjacency List to perform mathematical graph theory traversals.
-
-### 2. Multi-Variable Heuristic Cost Engine
-Unlike traditional graph search tools that rely solely on Euclidean Distance (`cost = distance`), this system incorporates a multi-variable edge-relaxation engine to simulate real-world navigation:
-- **Distance:** Base Haversine geographic distance.
-- **Traffic Congestion:** Dynamically scaled penalties mimicking dense intersections.
-- **Road Entity Types:** Cost prioritization heavily favoring multi-lane highways (primary) over narrow residential streets.
-- **Vehicle Profile Constraints:** Modifies allowable edges and speeds depending on if the user selects Car, Bike, or Rickshaw.
-- **Temporal Mechanics:** Simulates "Rush Hour" conditions based on time sliders.
-- **Occasion Toggles:** Models localized security or event anomalies, causing routing engines to dynamically steer around the dense city center.
-
-### 3. Integrated AI Pathfinding Algorithms
-Supports sequential processing and visual simulation of 7 major algorithms out of the box:
-1. **BFS (Breadth-First Search):** Unweighted baseline uniform-step traversal.
-2. **DFS (Depth-First Search):** Blind, naive deep exploration.
-3. **Dijkstra’s Algorithm:** Ground truth, guaranteed optimal (lowest-cost) weighted search.
-4. **A* (A-Star) Search:** High-efficiency, heuristically-informed graph search targeting the exact geographic destination coordinate using Haversine approximations.
-5. **Greedy Best-First Search:** Hyper-aggressive, heuristic-biased searching pushing pure speed over formal accuracy.
-6. **Bidirectional BFS:** Dual-origin swarm collision routing that dramatically cuts search time.
-7. **IDA* (Iterative Deepening A*):** Highly memory-efficient heuristic exploration mapping bounded cost thresholds.
-
-### 4. Interactive Simulation & Control Systems
-- **Intelligent Select & Confirm System:** Two-step confirmation system when placing Map points, ensuring you aren't accidentally resetting computation paths by misclicking.
-- **Live Visual Animations:** Leaflet.js-powered animation queues vividly render the 'visited boundaries' and final paths sequentially arrayed across the map without blocking the UI thread.
-- **Replay Capabilities:** Watch any algorithm's specific simulation execution on command via localized "Replay" hooks directly attached to React's `useMemo` states.
-
-### 5. Analytics & Comparison Dashboard
-- **Telemetry Engine:** Once processing concludes, a comprehensive table tracks raw execution milliseconds, path distance mapping, heuristic total costs, and gross nodes-visited expansion metrics.
-- **Responsive Dashboard Overlay:** Sits natively atop the layout, intelligently adapting its own CSS boundary frame strictly alongside the collapsible sidebar viewport, minimizing dead canvas space.
-- **Detailed Single-Path Isolation:** Users can click to highlight/isolate any single mathematical path on the map out of the swarm of algorithms for detailed review.
+Designed as an academic AI Lab project, this application showcases the difference between **uninformed search**, **informed heuristic search**, and **dynamic penalty-weighted edge relaxation** mimicking complex city constraints (traffic congestion, road classes, security risk zones, rush hours, vehicle type suitability, and passenger gender safety).
 
 ---
 
-## 💻 Tech Stack
-*   **Frontend Framework:** React (via Vite)
-*   **Design & Layout:** Tailwind CSS (featuring Glassmorphism, dynamic fluid collapsing, and nested dark themes)
-*   **Map Rendering Library:** Leaflet.js
-*   **Mapping Provider:** OpenStreetMap (CARTO tiles API)
-*   **Graph Logic:** Pure ES6 JavaScript (No heavyweight graph networking dependencies)
-
-## 🛠️ Installation & Setup
-
-1. Assemble the environment
-\`\`\`bash
-npm install
-\`\`\`
-
-2. Boot the development server
-\`\`\`bash
-npm run dev
-\`\`\`
-
-3. The system will operate locally at `http://localhost:5173`. Wait slightly for the Overpass API to fully compile the Dhanmondi testbed region upon initial load.
+## 🎯 Academic Learning Objectives & Contributions
+1. **Uninformed vs. Informed Search:** Concrete comparison of search space expansion (node count) and optimality gap between algorithms like BFS, DFS, Dijkstra, A*, Greedy BFS, Bi-BFS, and Iterative Deepening A* (IDA*).
+2. **Multi-Variable Heuristic Formulation:** Design of a cost-aware heuristic function that incorporates dynamic spatial-temporal parameters while maintaining mathematical **admissibility** and **consistency**.
+3. **Graph Topology Pruning (Safety Constraints):** Implements dynamic edge pruning ($C(edge) = \infty$) to model real-world high-risk environments at night for female passengers, showing how graph layout adjusts to security constraints.
+4. **Separation of Concerns in UI Simulation:** Solves simulation testing issues by distinguishing between **parameter modifications** (which randomize coordinates to test varied layouts) and **vehicle changes** (which preserve coordinates to directly compare vehicle profiles over the exact same route).
 
 ---
 
-## 📈 Future Expansion
-*   **Off-thread Processing:** Web Workers can be integrated to port heavy heuristic calculation loops away from React's DOM thread, guaranteeing 60FPS fluid UI even during 10,000+ node A* iterations.
-*   **Caching Storage:** Adding LocalStorage integration to instantly pull saved regional maps without redundantly querying OpenStreetMap endpoints.
+## ⚙️ Heuristics & Dynamic Cost Engine
 
+Instead of abstract grid-based pathfinding, Dhaka Pathfinder evaluates edge costs on-the-fly using real-world physical models.
 
-<!-- Final Cost = Base Distance × w.Distance × Traffic × Road Type × Vehicle Suitability × Security × Time of Day × Special Events -->
+### 1. Total Edge Cost Equation $C(edge)$
+Every road segment (edge) has a base spatial distance and a synthetic base traversal time $T$ (derived from length and road class speed limits). When traversing from Node $u$ to Node $v$, the dynamic cost $C(u, v)$ is calculated as:
+
+$$
+C(u, v) = C_{dist} + C_{traffic} + C_{safety} + C_{risk} + C_{road} + C_{vehicle} + C_{time} + C_{occasion}
+$$
+
+Where:
+- **Base Distance/Time Cost:** $C_{dist} = T \times w_{dist}$ (where $w_{dist}$ is the user distance slider weight).
+- **Traffic Delay:** $C_{traffic} = (\text{traffic\_level} \times 0.1) \times T \times w_{traffic}$.
+- **Security & Safety Penalties:** 
+  - $C_{safety} = (10 - \text{safety\_level}) \times 0.05 \times T \times w_{sec} \times M_{female}$
+  - $C_{risk} = \text{risk\_level} \times 0.05 \times T \times w_{sec} \times M_{female}$
+- **Road Class Penalty:** $C_{road} = \max(0, B_{road} - 1) \times T \times w_{road}$ (prioritizes arterial highways over narrow alleys).
+- **Vehicle Constraint Penalty:** $C_{vehicle} = \max(0, B_{vehicle} - 1) \times T \times w_{vehicle}$ (penalizes heavy buses in narrow residential streets or slow rickshaws on highways).
+- **Rush Hour Temporal Cost:** $C_{time} = 0.5 \times T \times w_{timeOfDay}$ *(active only if Time of Day falls within 8:00–10:00 AM or 5:00–8:00 PM)*.
+- **Occasion Cost:** $C_{occasion} = 1.5 \times T \times w_{occasion}$ *(active only if Occasion toggle is enabled and coordinates are inside the city center bounding box)*.
+
+#### 🛡️ Passenger Gender Pruning (High-Risk Night Pruning)
+To model absolute passenger safety, the cost function implements an dynamic pruning threshold:
+*   If the selected passenger is **Female** AND the time is **Late Night** (6:00 PM to 6:00 AM):
+    *   Any edge with $\text{risk\_level} \ge 7$ or $\text{safety\_level} \le 4$ yields $C(u, v) = \infty$.
+    *   This forces the search algorithm to completely bypass these streets, proving A* or Dijkstra will find a longer safe detour rather than exposing the passenger.
+
+---
+
+### 2. The Admissible Heuristic Function $h(n)$
+For informed algorithms like **A\*** and **IDA\*** to guarantee mathematical optimality (i.e. finding the absolute cheapest path), the heuristic function $h(n)$ estimating cost from node $n$ to goal $g$ must be **admissible**—it must never overestimate the actual remaining cost: $h(n) \le h^*(n)$.
+
+To maintain admissibility across multi-weighted variables:
+1. **Haversine Baseline:** We compute the straight-line distance $dKm$ between node coordinates (which is always shorter than physical winding streets).
+2. **Global Minimum Cost-per-Kilometer ($\min_{cpk}$):** The graph pre-calculates the absolute cheapest cost rate across the entire map. By multiplying $dKm$ by $\min_{cpk}$, the heuristic guarantees it remains lower than any possible actual road cost.
+3. **Weight Scaling:** The heuristic scales dynamically with user-adjusted weights:
+
+$$
+h(n) = \max\left(0, \ dKm \cdot \min_{cpk} \cdot w_{dist}\right)
+$$
+
+To guide search more aggressively during rush hours or occasions, the engine uses a **cost-aware heuristic modifier** which incorporates local node safety risks and temporal variables:
+
+$$
+h_{cost\_aware}(n) = \max\left(0, \ dKm \cdot \min_{cpk} \cdot \left[ w_{dist} + 0.4 \cdot w_{sec} \cdot \max\left(0, \frac{\text{sec}_n}{\text{sec}_g} - 1\right) + 0.22 \cdot w_{time} \cdot I_{rush} + 0.38 \cdot w_{occ} \cdot I_{city} \right] \right)
+$$
+
+---
+
+## 🧮 AI Pathfinding Algorithms Compared
+
+The simulator implements and visualizes 7 fundamental pathfinding algorithms:
+
+| Algorithm | Category | Heuristic Guided? | Optimality Guarantee? | Time Complexity | Space Complexity |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **BFS** | Uninformed | ❌ No | Only for Unweighted | $O(V + E)$ | $O(V)$ |
+| **DFS** | Uninformed | ❌ No | ❌ No | $O(V + E)$ | $O(V)$ |
+| **Dijkstra** | Uninformed | ❌ No | **✅ Yes (Cheapest Path)** | $O((V + E) \log V)$ | $O(V)$ |
+| **A\*** | Informed | **✅ Yes** | **✅ Yes (Cheapest Path)** | $O((V + E) \log V)$ | $O(V)$ |
+| **Greedy BFS** | Informed | **✅ Yes** | ❌ No | $O((V + E) \log V)$ | $O(V)$ |
+| **Bi-BFS** | Uninformed | ❌ No | Only for Unweighted | $O(V^{d/2})$ | $O(V^{d/2})$ |
+| **IDA\*** | Informed | **✅ Yes** | **✅ Yes (Cheapest Path)** | $O(b^d)$ (worst case) | **$O(d)$ (Ultra-low Memory)** |
+
+### Comparative Insights for Teachers
+*   **BFS vs. Dijkstra:** BFS explores uniform layers and is optimal for *distance* hops, but ignores traffic/road weights. Dijkstra expands search in order of weight cost, guaranteeing the lowest cost path.
+*   **Dijkstra vs. A\***: Dijkstra expands in all directions equally (circular wavefront). A* applies the heuristic to pull the wavefront directly toward the destination, reducing the search space (visited nodes) by up to **60-80%** while achieving the exact same optimal cost.
+*   **A\* vs. Greedy BFS:** Greedy BFS prioritizes $h(n)$ alone. It is extremely fast and visits minimal nodes, but often gets trapped in detours or chooses highly sub-optimal routes.
+*   **IDA\* Benefits:** While A* holds all open nodes in memory, IDA* uses depth-first searches bounded by cost thresholds. This drops memory usage from $O(V)$ down to $O(d)$ (path depth), making it ideal for memory-constrained embedded routing hardware.
+
+---
+
+## 🔄 Live Interactive Simulation Mechanics
+
+To provide a state-of-the-art interactive experience, the application implements distinct coordinate-selection states:
+
+### 1. Separation of Concerns in State Triggers
+*   **Parameter Changes (Weights, Rush Hour, Events):** Adjusting sliders or toggle switches automatically **regenerates two new random start and end points** on the active map. This enables quick testing of parameters across different parts of the city.
+*   **Vehicle Changes (Car, Bike, Rickshaw, Bus):** Switching vehicles **preserves the current start and end points**. This allows you to directly compare how travel routes, time costs, and optimal paths change for a bike vs. a car over the exact same journey.
+
+### 2. Real-Time Recalculation
+- Adjusting any weight slider, changing vehicle type, or switching map options automatically **re-runs all active algorithms instantly** in the background. The final paths, performance metrics, and comparison charts update on your screen in real time.
+
+---
+
+## 💻 Tech Stack & Architecture
+
+*   **Core UI Engine:** React 18, Vite (for hot module replacement and building).
+*   **Design Language:** HSL-tailored custom HSL dark-theme styling, glassy overlays, smooth height-adjusting sheets, and micro-interactions.
+*   **Mapping:** Leaflet.js and OpenStreetMap (CARTO dark/light tile layers).
+*   **Graph Builder:** Dynamic geographic network assembler, merging coordinates within 5 meters to resolve disjoint GPS segments into a single connected traversable graph.
+
+---
+
+## 🚀 Running the Project Locally
+
+Follow these quick commands to spin up the local server on your computer:
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+
+3. Open your browser and navigate to **`http://localhost:5173`** (or the URL shown in your terminal).
+4. Select an area in the sidebar (e.g. **Dhanmondi** or **Gulshan**) to fetch OpenStreetMap data. 
+5. Start moving weights, switching vehicles, or changing passenger safety settings to see the pathfinder instantly adapt in real time!
